@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💧 Caspian Water Recovery</title>
+
+<!-- Mapbox GL JS -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+/* ── TOKENS ── */
+:root {
+  --bg: #060d18;
+  --surface: #0b1628;
+  --surface2: #0f1f36;
+  --border: #1a3356;
+  --accent: #00e5ff;
+  --accent2: #0091ea;
+  --green: #00e676;
+  --orange: #ffab40;
+  --red: #ff5252;
+  --text: #e8f0fe;
+  --muted: #7ea8cc;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+header {
+  background: linear-gradient(90deg, #020918 0%, #061428 50%, #020918 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
+}
+
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+
+.logo-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, var(--accent), #80deea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.logo-sub {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.live-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 230, 118, 0.08);
+  border: 1px solid rgba(0, 230, 118, 0.25);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--green);
+  font-family: var(--font-mono);
+}
+
+.live-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.time-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.refresh-btn {
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-family: var(--font-mono);
+}
+.refresh-btn:hover {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: var(--accent);
+}
+
+/* ── BEST BANNER ── */
+#bestBanner {
+  background: linear-gradient(90deg, #020f1e, #041a30, #020f1e);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 20px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#bestBanner .highlight { color: var(--green); font-weight: 700; }
+#bestBanner .accent { color: var(--accent); }
+
+/* ── MAIN LAYOUT ── */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 300px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-family: var(--font-mono);
+  letter-spacing: 0.3px;
+}
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.panel { display: none; flex: 1; overflow-y: auto; }
+.panel.active { display: block; }
+
+/* scrollbar */
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── CARDS ── */
+.cards { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+.card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--card-color, var(--muted));
+  border-radius: 3px 0 0 3px;
+}
+.card:hover { transform: translateX(2px); border-color: var(--accent); }
+.card.selected { border-color: var(--accent); background: #0a2040; }
+
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.card-city { font-size: 13px; font-weight: 600; color: var(--text); }
+.card-index { font-size: 22px; font-weight: 800; font-family: var(--font-mono); }
+.card-status { font-size: 10px; margin-top: 1px; font-family: var(--font-mono); }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.card-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.card-stat b { color: var(--text); font-family: var(--font-mono); }
+
+.card-tech {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.06);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+/* ── AI PANEL ── */
+.ai-panel { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.ai-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.ai-box-title {
+  font-size: 11px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.ai-text { font-size: 12px; line-height: 1.8; color: #b0bec5; }
+.ai-text b { color: var(--green); }
+
+.decision-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(26, 51, 86, 0.5);
+  font-size: 11px;
+}
+.decision-row:last-child { border-bottom: none; }
+.dec-tech { flex: 1; color: var(--text); }
+.dec-cond { flex: 1; color: var(--muted); font-family: var(--font-mono); font-size: 10px; line-height: 1.4; }
+.dec-status { font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.on { color: var(--green); }
+.off { color: #455a64; }
+
+/* NASA stats */
+.nasa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.nasa-stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.nasa-val {
+  font-size: 20px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+.nasa-label { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+
+/* ── CHARTS PANEL ── */
+.charts-panel { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.chart-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+.chart-title { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-bottom: 10px; }
+
+/* ── MAP AREA ── */
+.map-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#map { width: 100%; height: 100%; }
+
+/* ── MAP LEGEND ── */
+.map-legend {
+  position: absolute;
+  bottom: 30px;
+  right: 16px;
+  z-index: 10;
+  background: rgba(6, 13, 24, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  backdrop-filter: blur(8px);
+  min-width: 170px;
+}
+.legend-title {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.legend-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-sep { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+/* ── MAP CONTROLS ── */
+.layer-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.layer-btn {
+  background: rgba(6, 13, 24, 0.92);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+.layer-btn:hover, .layer-btn.active {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── LOADER ── */
+#loader {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9999; gap: 16px;
+}
+.spinner {
+  width: 48px; height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { color: var(--muted); font-size: 13px; font-family: var(--font-mono); }
+.loader-sub { color: #2a4a6a; font-size: 11px; font-family: var(--font-mono); }
+
+/* ── POPUP OVERRIDE ── */
+.mapboxgl-popup-content {
+  background: rgba(6, 13, 24, 0.96) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  color: var(--text) !important;
+  padding: 14px !important;
+  font-family: 'Segoe UI', sans-serif !important;
+  backdrop-filter: blur(12px);
+  min-width: 200px;
+}
+.mapboxgl-popup-tip { border-top-color: var(--border) !important; }
+.popup-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+.popup-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+.popup-row span { color: var(--muted); }
+.popup-row b { color: var(--text); font-family: var(--font-mono); }
+.popup-badge {
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-align: center;
+}
+
+footer {
+  text-align: center;
+  padding: 6px;
+  color: #2a4a6a;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <div class="loader-text" id="loaderText">CASPIAN WATER RECOVERY</div>
+  <div class="loader-sub">NASA + Mapbox GL WebGL жүктелуде...</div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💧</div>
+    <div>
+      <div class="logo-text">Caspian Water Recovery</div>
+      <div class="logo-sub">NASA POWER · OpenWeatherMap · Mapbox GL</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-chip"><div class="live-dot"></div>LIVE</div>
+    <div class="time-label" id="timeLabel">—</div>
+    <button class="refresh-btn" onclick="loadWeather()">⟳ REFRESH</button>
+  </div>
+</header>
+
+<div id="bestBanner">⏳ Жүктелуде...</div>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('cities',this)">🏙️ ҚАЛАЛАР</div>
+      <div class="tab" onclick="showTab('ai',this)">🤖 AI</div>
+      <div class="tab" onclick="showTab('charts',this)">📊 ГРАФИКТЕР</div>
+    </div>
+
+    <!-- Cities panel -->
+    <div class="panel active" id="tab-cities">
+      <div class="cards" id="cards">
+        <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Жүктелуде...</div>
+      </div>
+    </div>
+
+    <!-- AI panel -->
+    <div class="panel" id="tab-ai">
+      <div class="ai-panel">
+        <div class="ai-box">
+          <div class="ai-box-title">🤖 AI Автоматты Шешім</div>
+          <div class="ai-text" id="aiText">Жүктелуде...</div>
+        </div>
+        <div class="ai-box">
+          <div class="ai-box-title">⚙️ Технология кестесі</div>
+          <div id="decisionTable"></div>
+        </div>
+        <div class="ai-box">
+          <div class="ai-box-title">📡 NASA Статистика</div>
+          <div class="nasa-grid" id="nasaStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts panel -->
+    <div class="panel" id="tab-charts">
+      <div class="charts-panel">
+        <div class="chart-box">
+          <div class="chart-title">📊 КОНДЕНСАЦИЯ ИНДЕКСІ (%)</div>
+          <canvas id="indexChart" height="160"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">💧 ЫЛҒАЛ vs 🌡️ ТЕМП</div>
+          <canvas id="humidChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-area">
+    <div id="map"></div>
+
+    <!-- Layer controls -->
+    <div class="layer-controls">
+      <button class="layer-btn active" id="btn-heatmap" onclick="toggleLayer('heatmap')">🔥 Heatmap</button>
+      <button class="layer-btn active" id="btn-points" onclick="toggleLayer('points')">📍 Критикалық</button>
+      <button class="layer-btn" id="btn-3d" onclick="toggle3D()">🌐 3D Режим</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="map-legend">
+      <div class="legend-title">💨 Булану мм/күн</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#1a9850"></div>Аз — &lt;5 мм/күн</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#fee08b"></div>Орташа — 5–10</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#fc8d59"></div>Жоғары — 10–14</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#d73027"></div>Критикалық &gt;14</div>
+      <hr class="legend-sep">
+      <div style="font-size:10px;color:#455a64">⚠️ Нүктелер — TOP-5 зона</div>
+    </div>
+  </div>
+</div>
+
+<footer>💧 CASPIAN WATER RECOVERY · I ХАЛЫҚАРАЛЫҚ CASPIAN HACKATHON 2026 · NASA POWER API · OpenWeatherMap · Mapbox GL WebGL</footer>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIG — мұнда кілтіңізді қойыңыз
+// ══════════════════════════════════════════
+mapboxgl.accessToken = 'pk.eyJ1IjoibWFudXJrYXlldiIsImEiOiJjbXNjdGx3YWMwd3o1MnpzNXd4ZTB3a20xIn0.TFkYBesFueHqrCjX6wzUSw'; // ← ОСЫҒАН ҚОЙЫҢЫЗ
+
+// ══════════════════════════════════════════
+// NASA деректері (inline GeoJSON)
+// ══════════════════════════════════════════
+const NASA_DATA = {"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,36.5]},"properties":{"evaporation":11.54,"temp":32.2,"humidity":58.0,"wind":3.6,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,36.5]},"properties":{"evaporation":11.97,"temp":33.1,"humidity":57.2,"wind":3.6,"sst":34.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,36.5]},"properties":{"evaporation":12.24,"temp":33.4,"humidity":56.5,"wind":3.7,"sst":35.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,36.5]},"properties":{"evaporation":12.24,"temp":32.9,"humidity":55.8,"wind":3.7,"sst":34.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,36.5]},"properties":{"evaporation":12.22,"temp":32.3,"humidity":55.0,"wind":3.7,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,36.5]},"properties":{"evaporation":12.49,"temp":32.6,"humidity":54.2,"wind":3.8,"sst":34.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,36.5]},"properties":{"evaporation":12.77,"temp":33.0,"humidity":53.5,"wind":3.8,"sst":35.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,36.5]},"properties":{"evaporation":12.77,"temp":32.5,"humidity":52.8,"wind":3.8,"sst":34.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,36.5]},"properties":{"evaporation":13.16,"temp":33.2,"humidity":52.0,"wind":3.9,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,36.5]},"properties":{"evaporation":13.32,"temp":33.2,"humidity":51.2,"wind":3.9,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,36.5]},"properties":{"evaporation":13.44,"temp":33.1,"humidity":50.5,"wind":3.9,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,36.5]},"properties":{"evaporation":13.91,"temp":34.1,"humidity":49.7,"wind":3.9,"sst":36.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,36.5]},"properties":{"evaporation":14.29,"temp":34.8,"humidity":49.0,"wind":4.0,"sst":37.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,36.5]},"properties":{"evaporation":14.03,"temp":33.4,"humidity":48.3,"wind":4.0,"sst":35.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,36.8]},"properties":{"evaporation":11.79,"temp":33.4,"humidity":58.1,"wind":3.6,"sst":35.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,36.8]},"properties":{"evaporation":11.64,"temp":32.3,"humidity":57.4,"wind":3.7,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,36.8]},"properties":{"evaporation":11.89,"temp":32.6,"humidity":56.6,"wind":3.7,"sst":34.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,36.8]},"properties":{"evaporation":11.89,"temp":32.1,"humidity":55.9,"wind":3.7,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,36.8]},"properties":{"evaporation":12.49,"temp":33.5,"humidity":55.1,"wind":3.8,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,36.8]},"properties":{"evaporation":12.73,"temp":33.8,"humidity":54.4,"wind":3.8,"sst":35.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,36.8]},"properties":{"evaporation":13.02,"temp":34.2,"humidity":53.6,"wind":3.8,"sst":36.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,36.8]},"properties":{"evaporation":13.02,"temp":33.7,"humidity":52.9,"wind":3.8,"sst":35.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,36.8]},"properties":{"evaporation":12.8,"temp":32.4,"humidity":52.2,"wind":3.9,"sst":34.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,36.8]},"properties":{"evaporation":13.08,"temp":32.8,"humidity":51.4,"wind":3.9,"sst":35.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,36.8]},"properties":{"evaporation":13.7,"temp":34.3,"humidity":50.6,"wind":3.9,"sst":36.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,36.8]},"properties":{"evaporation":13.57,"temp":33.3,"humidity":49.9,"wind":4.0,"sst":35.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,36.8]},"properties":{"evaporation":13.94,"temp":34.0,"humidity":49.1,"wind":4.0,"sst":36.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,36.8]},"properties":{"evaporation":14.28,"temp":34.6,"humidity":48.4,"wind":4.0,"sst":37.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,37.1]},"properties":{"evaporation":11.37,"temp":32.4,"humidity":58.3,"wind":3.6,"sst":34.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,37.1]},"properties":{"evaporation":11.82,"temp":33.3,"humidity":57.5,"wind":3.7,"sst":35.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,37.1]},"properties":{"evaporation":12.07,"temp":33.6,"humidity":56.8,"wind":3.7,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,37.1]},"properties":{"evaporation":12.07,"temp":33.1,"humidity":56.1,"wind":3.7,"sst":35.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,37.1]},"properties":{"evaporation":12.07,"temp":32.5,"humidity":55.3,"wind":3.8,"sst":34.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,37.1]},"properties":{"evaporation":12.14,"temp":32.2,"humidity":54.5,"wind":3.8,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,37.1]},"properties":{"evaporation":12.57,"temp":33.1,"humidity":53.8,"wind":3.8,"sst":35.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,37.1]},"properties":{"evaporation":12.63,"temp":32.7,"humidity":53.0,"wind":3.9,"sst":34.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,37.1]},"properties":{"evaporation":12.99,"temp":33.4,"humidity":52.3,"wind":3.9,"sst":35.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,37.1]},"properties":{"evaporation":13.27,"temp":33.8,"humidity":51.5,"wind":3.9,"sst":36.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,37.1]},"properties":{"evaporation":13.28,"temp":33.3,"humidity":50.8,"wind":3.9,"sst":35.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,37.1]},"properties":{"evaporation":13.61,"temp":33.8,"humidity":50.0,"wind":4.0,"sst":36.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,37.1]},"properties":{"evaporation":13.86,"temp":34.1,"humidity":49.3,"wind":4.0,"sst":36.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,37.1]},"properties":{"evaporation":13.86,"temp":33.6,"humidity":48.6,"wind":4.0,"sst":36.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,37.4]},"properties":{"evaporation":11.16,"temp":32.0,"humidity":58.5,"wind":3.7,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,37.4]},"properties":{"evaporation":11.47,"temp":32.5,"humidity":57.7,"wind":3.7,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,37.4]},"properties":{"evaporation":11.71,"temp":32.8,"humidity":57.0,"wind":3.7,"sst":34.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,37.4]},"properties":{"evaporation":11.72,"temp":32.3,"humidity":56.2,"wind":3.7,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,37.4]},"properties":{"evaporation":11.72,"temp":31.7,"humidity":55.5,"wind":3.8,"sst":33.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,37.4]},"properties":{"evaporation":12.39,"temp":33.4,"humidity":54.7,"wind":3.8,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,37.4]},"properties":{"evaporation":12.22,"temp":32.3,"humidity":53.9,"wind":3.8,"sst":34.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,37.4]},"properties":{"evaporation":12.27,"temp":31.9,"humidity":53.2,"wind":3.9,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,37.4]},"properties":{"evaporation":12.64,"temp":32.6,"humidity":52.5,"wind":3.9,"sst":34.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,37.4]},"properties":{"evaporation":12.92,"temp":33.0,"humidity":51.7,"wind":3.9,"sst":35.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,37.4]},"properties":{"evaporation":12.95,"temp":32.5,"humidity":51.0,"wind":4.0,"sst":34.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,37.4]},"properties":{"evaporation":13.26,"temp":33.0,"humidity":50.2,"wind":4.0,"sst":35.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,37.4]},"properties":{"evaporation":13.5,"temp":33.3,"humidity":49.5,"wind":4.0,"sst":35.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,37.4]},"properties":{"evaporation":13.51,"temp":32.8,"humidity":48.7,"wind":4.0,"sst":35.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,37.7]},"properties":{"evaporation":11.02,"temp":32.5,"humidity":59.4,"wind":3.6,"sst":34.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,37.7]},"properties":{"evaporation":10.81,"temp":31.2,"humidity":58.6,"wind":3.7,"sst":32.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,37.7]},"properties":{"evaporation":11.27,"temp":32.2,"humidity":57.8,"wind":3.7,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,37.7]},"properties":{"evaporation":11.72,"temp":33.2,"humidity":57.1,"wind":3.7,"sst":35.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,37.7]},"properties":{"evaporation":11.36,"temp":31.4,"humidity":56.4,"wind":3.8,"sst":33.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,37.7]},"properties":{"evaporation":11.94,"temp":32.8,"humidity":55.6,"wind":3.8,"sst":34.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,37.7]},"properties":{"evaporation":11.94,"temp":32.3,"humidity":54.9,"wind":3.8,"sst":34.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,37.7]},"properties":{"evaporation":12.48,"temp":33.5,"humidity":54.1,"wind":3.9,"sst":35.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,37.7]},"properties":{"evaporation":12.64,"temp":33.5,"humidity":53.4,"wind":3.9,"sst":35.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,37.7]},"properties":{"evaporation":12.65,"temp":33.0,"humidity":52.6,"wind":3.9,"sst":35.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,37.7]},"properties":{"evaporation":12.56,"temp":32.2,"humidity":51.9,"wind":3.9,"sst":34.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,37.7]},"properties":{"evaporation":13.2,"temp":33.7,"humidity":51.1,"wind":4.0,"sst":36.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,37.7]},"properties":{"evaporation":13.18,"temp":33.1,"humidity":50.3,"wind":4.0,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,37.7]},"properties":{"evaporation":13.42,"temp":33.4,"humidity":49.6,"wind":4.0,"sst":35.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,37.7]},"properties":{"evaporation":13.44,"temp":32.9,"humidity":48.9,"wind":4.1,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,38.0]},"properties":{"evaporation":10.72,"temp":31.8,"humidity":59.5,"wind":3.7,"sst":33.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,38.0]},"properties":{"evaporation":10.96,"temp":32.1,"humidity":58.8,"wind":3.7,"sst":33.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,38.0]},"properties":{"evaporation":11.28,"temp":32.6,"humidity":58.0,"wind":3.7,"sst":34.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,38.0]},"properties":{"evaporation":11.31,"temp":32.1,"humidity":57.2,"wind":3.8,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,38.0]},"properties":{"evaporation":11.64,"temp":32.7,"humidity":56.5,"wind":3.8,"sst":34.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,38.0]},"properties":{"evaporation":11.5,"temp":31.7,"humidity":55.8,"wind":3.8,"sst":33.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,38.0]},"properties":{"evaporation":11.96,"temp":32.7,"humidity":55.0,"wind":3.8,"sst":34.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,38.0]},"properties":{"evaporation":11.8,"temp":31.6,"humidity":54.2,"wind":3.9,"sst":33.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,38.0]},"properties":{"evaporation":12.2,"temp":32.4,"humidity":53.5,"wind":3.9,"sst":34.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,38.0]},"properties":{"evaporation":12.2,"temp":31.9,"humidity":52.8,"wind":3.9,"sst":34.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,38.0]},"properties":{"evaporation":12.51,"temp":32.3,"humidity":52.0,"wind":4.0,"sst":34.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,38.0]},"properties":{"evaporation":12.75,"temp":32.6,"humidity":51.2,"wind":4.0,"sst":34.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,38.0]},"properties":{"evaporation":13.18,"temp":33.5,"humidity":50.5,"wind":4.0,"sst":35.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,38.0]},"properties":{"evaporation":13.19,"temp":33.0,"humidity":49.8,"wind":4.0,"sst":35.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,38.0]},"properties":{"evaporation":13.43,"temp":33.2,"humidity":49.0,"wind":4.1,"sst":35.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,38.3]},"properties":{"evaporation":10.37,"temp":31.0,"humidity":59.6,"wind":3.7,"sst":32.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,38.3]},"properties":{"evaporation":10.62,"temp":31.3,"humidity":58.9,"wind":3.7,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,38.3]},"properties":{"evaporation":10.93,"temp":31.8,"humidity":58.1,"wind":3.7,"sst":33.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,38.3]},"properties":{"evaporation":11.04,"temp":31.6,"humidity":57.4,"wind":3.8,"sst":33.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,38.3]},"properties":{"evaporation":11.28,"temp":31.9,"humidity":56.7,"wind":3.8,"sst":33.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,38.3]},"properties":{"evaporation":11.75,"temp":32.9,"humidity":55.9,"wind":3.8,"sst":34.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,38.3]},"properties":{"evaporation":11.62,"temp":31.9,"humidity":55.1,"wind":3.9,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,38.3]},"properties":{"evaporation":11.81,"temp":32.0,"humidity":54.4,"wind":3.9,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,38.3]},"properties":{"evaporation":11.85,"temp":31.6,"humidity":53.6,"wind":3.9,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,38.3]},"properties":{"evaporation":12.46,"temp":33.1,"humidity":52.9,"wind":3.9,"sst":35.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,38.3]},"properties":{"evaporation":12.4,"temp":32.3,"humidity":52.1,"wind":4.0,"sst":34.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,38.3]},"properties":{"evaporation":12.4,"temp":31.8,"humidity":51.4,"wind":4.0,"sst":34.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,38.3]},"properties":{"evaporation":12.8,"temp":32.6,"humidity":50.6,"wind":4.0,"sst":34.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,38.3]},"properties":{"evaporation":13.07,"temp":32.9,"humidity":49.9,"wind":4.1,"sst":35.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,38.3]},"properties":{"evaporation":13.07,"temp":32.4,"humidity":49.2,"wind":4.1,"sst":34.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,38.6]},"properties":{"evaporation":10.62,"temp":32.2,"humidity":59.8,"wind":3.7,"sst":33.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,38.6]},"properties":{"evaporation":10.23,"temp":30.4,"humidity":59.0,"wind":3.7,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,38.6]},"properties":{"evaporation":10.83,"temp":31.8,"humidity":58.3,"wind":3.8,"sst":33.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,38.6]},"properties":{"evaporation":10.69,"temp":30.8,"humidity":57.5,"wind":3.8,"sst":32.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,38.6]},"properties":{"evaporation":10.93,"temp":31.1,"humidity":56.8,"wind":3.8,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,38.6]},"properties":{"evaporation":11.52,"temp":32.5,"humidity":56.0,"wind":3.8,"sst":34.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,38.6]},"properties":{"evaporation":11.54,"temp":32.0,"humidity":55.3,"wind":3.9,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,38.6]},"properties":{"evaporation":11.82,"temp":32.4,"humidity":54.5,"wind":3.9,"sst":34.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,38.6]},"properties":{"evaporation":12.09,"temp":32.8,"humidity":53.8,"wind":3.9,"sst":34.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,38.6]},"properties":{"evaporation":12.24,"temp":32.7,"humidity":53.1,"wind":4.0,"sst":34.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,38.6]},"properties":{"evaporation":12.4,"temp":32.7,"humidity":52.3,"wind":4.0,"sst":34.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,38.6]},"properties":{"evaporation":12.17,"temp":31.4,"humidity":51.5,"wind":4.0,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,38.6]},"properties":{"evaporation":12.6,"temp":32.3,"humidity":50.8,"wind":4.0,"sst":34.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,38.6]},"properties":{"evaporation":12.62,"temp":31.8,"humidity":50.0,"wind":4.1,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,38.6]},"properties":{"evaporation":12.99,"temp":32.5,"humidity":49.3,"wind":4.1,"sst":35.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,38.9]},"properties":{"evaporation":10.2,"temp":31.2,"humidity":60.0,"wind":3.7,"sst":32.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,38.9]},"properties":{"evaporation":10.42,"temp":31.4,"humidity":59.2,"wind":3.7,"sst":33.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,38.9]},"properties":{"evaporation":10.75,"temp":31.9,"humidity":58.4,"wind":3.8,"sst":33.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,38.9]},"properties":{"evaporation":10.88,"temp":31.8,"humidity":57.7,"wind":3.8,"sst":33.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,38.9]},"properties":{"evaporation":11.12,"temp":32.1,"humidity":57.0,"wind":3.8,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,38.9]},"properties":{"evaporation":11.12,"temp":31.5,"humidity":56.2,"wind":3.9,"sst":33.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,38.9]},"properties":{"evaporation":11.12,"temp":31.0,"humidity":55.5,"wind":3.9,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,38.9]},"properties":{"evaporation":11.65,"temp":32.2,"humidity":54.7,"wind":3.9,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,38.9]},"properties":{"evaporation":11.68,"temp":31.8,"humidity":54.0,"wind":3.9,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,38.9]},"properties":{"evaporation":12.07,"temp":32.5,"humidity":53.2,"wind":4.0,"sst":34.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,38.9]},"properties":{"evaporation":12.23,"temp":32.5,"humidity":52.5,"wind":4.0,"sst":34.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,38.9]},"properties":{"evaporation":12.21,"temp":31.9,"humidity":51.7,"wind":4.0,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,38.9]},"properties":{"evaporation":12.21,"temp":31.3,"humidity":50.9,"wind":4.1,"sst":33.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,38.9]},"properties":{"evaporation":12.9,"temp":33.1,"humidity":50.2,"wind":4.1,"sst":35.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,38.9]},"properties":{"evaporation":12.91,"temp":32.6,"humidity":49.5,"wind":4.1,"sst":35.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.3,39.2]},"properties":{"evaporation":9.54,"temp":29.9,"humidity":60.9,"wind":3.7,"sst":31.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,39.2]},"properties":{"evaporation":9.82,"temp":30.3,"humidity":60.1,"wind":3.7,"sst":31.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,39.2]},"properties":{"evaporation":10.44,"temp":31.8,"humidity":59.4,"wind":3.8,"sst":33.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,39.2]},"properties":{"evaporation":10.52,"temp":31.5,"humidity":58.6,"wind":3.8,"sst":33.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,39.2]},"properties":{"evaporation":10.52,"temp":31.0,"humidity":57.9,"wind":3.8,"sst":32.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,39.2]},"properties":{"evaporation":10.77,"temp":31.3,"humidity":57.1,"wind":3.8,"sst":33.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,39.2]},"properties":{"evaporation":10.76,"temp":30.7,"humidity":56.4,"wind":3.9,"sst":32.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,39.2]},"properties":{"evaporation":11.38,"temp":32.2,"humidity":55.6,"wind":3.9,"sst":34.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,39.2]},"properties":{"evaporation":11.05,"temp":30.6,"humidity":54.8,"wind":3.9,"sst":32.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,39.2]},"properties":{"evaporation":11.47,"temp":31.4,"humidity":54.1,"wind":4.0,"sst":33.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,39.2]},"properties":{"evaporation":11.44,"temp":30.8,"humidity":53.4,"wind":4.0,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,39.2]},"properties":{"evaporation":11.6,"temp":30.8,"humidity":52.6,"wind":4.0,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,39.2]},"properties":{"evaporation":11.97,"temp":31.5,"humidity":51.9,"wind":4.0,"sst":33.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,39.2]},"properties":{"evaporation":12.45,"temp":32.5,"humidity":51.1,"wind":4.1,"sst":34.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,39.2]},"properties":{"evaporation":12.3,"temp":31.5,"humidity":50.4,"wind":4.1,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.3,39.5]},"properties":{"evaporation":9.88,"temp":31.4,"humidity":61.0,"wind":3.7,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,39.5]},"properties":{"evaporation":9.56,"temp":29.8,"humidity":60.2,"wind":3.7,"sst":31.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,39.5]},"properties":{"evaporation":10.18,"temp":31.3,"humidity":59.5,"wind":3.8,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,39.5]},"properties":{"evaporation":10.17,"temp":30.7,"humidity":58.7,"wind":3.8,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,39.5]},"properties":{"evaporation":10.26,"temp":30.5,"humidity":58.0,"wind":3.8,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,39.5]},"properties":{"evaporation":10.88,"temp":32.0,"humidity":57.3,"wind":3.9,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,39.5]},"properties":{"evaporation":10.75,"temp":31.0,"humidity":56.5,"wind":3.9,"sst":32.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,39.5]},"properties":{"evaporation":11.11,"temp":31.7,"humidity":55.8,"wind":3.9,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,39.5]},"properties":{"evaporation":11.27,"temp":31.7,"humidity":55.0,"wind":3.9,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,39.5]},"properties":{"evaporation":11.42,"temp":31.6,"humidity":54.2,"wind":4.0,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,39.5]},"properties":{"evaporation":11.66,"temp":31.9,"humidity":53.5,"wind":4.0,"sst":34.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,39.5]},"properties":{"evaporation":11.94,"temp":32.3,"humidity":52.8,"wind":4.0,"sst":34.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,39.5]},"properties":{"evaporation":12.21,"temp":32.6,"humidity":52.0,"wind":4.1,"sst":34.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,39.5]},"properties":{"evaporation":12.19,"temp":32.0,"humidity":51.2,"wind":4.1,"sst":34.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,39.5]},"properties":{"evaporation":12.2,"temp":31.5,"humidity":50.5,"wind":4.1,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.3,39.8]},"properties":{"evaporation":9.46,"temp":30.4,"humidity":61.2,"wind":3.7,"sst":32.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,39.8]},"properties":{"evaporation":9.77,"temp":30.8,"humidity":60.4,"wind":3.8,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,39.8]},"properties":{"evaporation":10.01,"temp":31.1,"humidity":59.6,"wind":3.8,"sst":32.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,39.8]},"properties":{"evaporation":10.32,"temp":31.6,"humidity":58.9,"wind":3.8,"sst":33.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,39.8]},"properties":{"evaporation":10.33,"temp":31.1,"humidity":58.1,"wind":3.8,"sst":32.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,39.8]},"properties":{"evaporation":10.71,"temp":31.8,"humidity":57.4,"wind":3.9,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,39.8]},"properties":{"evaporation":10.58,"temp":30.8,"humidity":56.6,"wind":3.9,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,39.8]},"properties":{"evaporation":10.58,"temp":30.3,"humidity":55.9,"wind":3.9,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,39.8]},"properties":{"evaporation":10.88,"temp":30.7,"humidity":55.1,"wind":4.0,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,39.8]},"properties":{"evaporation":11.25,"temp":31.4,"humidity":54.4,"wind":4.0,"sst":33.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,39.8]},"properties":{"evaporation":11.25,"temp":30.9,"humidity":53.7,"wind":4.0,"sst":33.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,39.8]},"properties":{"evaporation":11.53,"temp":31.3,"humidity":52.9,"wind":4.0,"sst":33.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,39.8]},"properties":{"evaporation":11.8,"temp":31.6,"humidity":52.1,"wind":4.1,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,39.8]},"properties":{"evaporation":11.78,"temp":31.0,"humidity":51.4,"wind":4.1,"sst":33.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,39.8]},"properties":{"evaporation":12.12,"temp":31.6,"humidity":50.6,"wind":4.1,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.3,40.1]},"properties":{"evaporation":9.11,"temp":29.6,"humidity":61.3,"wind":3.7,"sst":31.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,40.1]},"properties":{"evaporation":9.41,"temp":30.0,"humidity":60.5,"wind":3.8,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,40.1]},"properties":{"evaporation":9.42,"temp":29.5,"humidity":59.8,"wind":3.8,"sst":31.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,40.1]},"properties":{"evaporation":9.73,"temp":30.0,"humidity":59.0,"wind":3.8,"sst":31.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,40.1]},"properties":{"evaporation":10.12,"temp":30.7,"humidity":58.3,"wind":3.9,"sst":32.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,40.1]},"properties":{"evaporation":10.12,"temp":30.2,"humidity":57.6,"wind":3.9,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,40.1]},"properties":{"evaporation":10.58,"temp":31.2,"humidity":56.8,"wind":3.9,"sst":33.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,40.1]},"properties":{"evaporation":10.32,"temp":29.8,"humidity":56.0,"wind":3.9,"sst":31.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,40.1]},"properties":{"evaporation":11.1,"temp":31.8,"humidity":55.3,"wind":4.0,"sst":33.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,40.1]},"properties":{"evaporation":11.26,"temp":31.8,"humidity":54.5,"wind":4.0,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,40.1]},"properties":{"evaporation":10.9,"temp":30.1,"humidity":53.8,"wind":4.0,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,40.1]},"properties":{"evaporation":11.2,"temp":30.5,"humidity":53.0,"wind":4.1,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,40.1]},"properties":{"evaporation":11.8,"temp":32.0,"humidity":52.3,"wind":4.1,"sst":34.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,40.1]},"properties":{"evaporation":12.03,"temp":32.2,"humidity":51.5,"wind":4.1,"sst":34.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,40.1]},"properties":{"evaporation":11.9,"temp":31.2,"humidity":50.8,"wind":4.2,"sst":33.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.3,40.4]},"properties":{"evaporation":9.36,"temp":30.8,"humidity":61.5,"wind":3.7,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,40.4]},"properties":{"evaporation":9.06,"temp":29.2,"humidity":60.7,"wind":3.8,"sst":30.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,40.4]},"properties":{"evaporation":9.66,"temp":30.7,"humidity":60.0,"wind":3.8,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,40.4]},"properties":{"evaporation":9.98,"temp":31.2,"humidity":59.2,"wind":3.8,"sst":32.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,40.4]},"properties":{"evaporation":9.76,"temp":29.9,"humidity":58.5,"wind":3.9,"sst":31.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,40.4]},"properties":{"evaporation":10.37,"temp":31.4,"humidity":57.7,"wind":3.9,"sst":33.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,40.4]},"properties":{"evaporation":10.23,"temp":30.4,"humidity":57.0,"wind":3.9,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,40.4]},"properties":{"evaporation":10.59,"temp":31.0,"humidity":56.2,"wind":4.0,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,40.4]},"properties":{"evaporation":10.75,"temp":31.0,"humidity":55.4,"wind":4.0,"sst":33.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,40.4]},"properties":{"evaporation":10.9,"temp":31.0,"humidity":54.7,"wind":4.0,"sst":33.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,40.4]},"properties":{"evaporation":11.15,"temp":31.3,"humidity":54.0,"wind":4.0,"sst":33.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,40.4]},"properties":{"evaporation":11.45,"temp":31.7,"humidity":53.2,"wind":4.1,"sst":33.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,40.4]},"properties":{"evaporation":11.21,"temp":30.4,"humidity":52.5,"wind":4.1,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,40.4]},"properties":{"evaporation":11.67,"temp":31.4,"humidity":51.7,"wind":4.1,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,40.4]},"properties":{"evaporation":11.54,"temp":30.4,"humidity":51.0,"wind":4.2,"sst":32.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,40.7]},"properties":{"evaporation":9.3,"temp":30.4,"humidity":60.9,"wind":3.8,"sst":32.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,40.7]},"properties":{"evaporation":9.31,"temp":29.9,"humidity":60.1,"wind":3.8,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,40.7]},"properties":{"evaporation":9.32,"temp":29.3,"humidity":59.3,"wind":3.9,"sst":31.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,40.7]},"properties":{"evaporation":9.56,"temp":29.6,"humidity":58.6,"wind":3.9,"sst":31.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,40.7]},"properties":{"evaporation":9.98,"temp":30.5,"humidity":57.9,"wind":3.9,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,40.7]},"properties":{"evaporation":9.96,"temp":29.9,"humidity":57.1,"wind":3.9,"sst":31.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,40.7]},"properties":{"evaporation":10.23,"temp":30.2,"humidity":56.4,"wind":4.0,"sst":32.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,40.7]},"properties":{"evaporation":10.51,"temp":30.6,"humidity":55.6,"wind":4.0,"sst":32.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,40.7]},"properties":{"evaporation":10.55,"temp":30.2,"humidity":54.9,"wind":4.0,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,40.7]},"properties":{"evaporation":10.93,"temp":30.9,"humidity":54.1,"wind":4.1,"sst":33.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,40.7]},"properties":{"evaporation":10.76,"temp":29.8,"humidity":53.4,"wind":4.1,"sst":32.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,40.7]},"properties":{"evaporation":11.22,"temp":30.8,"humidity":52.6,"wind":4.1,"sst":33.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,40.7]},"properties":{"evaporation":11.7,"temp":31.8,"humidity":51.8,"wind":4.2,"sst":34.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,40.7]},"properties":{"evaporation":11.46,"temp":30.5,"humidity":51.1,"wind":4.2,"sst":32.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,40.7]},"properties":{"evaporation":12.04,"temp":31.9,"humidity":50.4,"wind":4.2,"sst":34.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,41.0]},"properties":{"evaporation":9.22,"temp":30.5,"humidity":61.0,"wind":3.8,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,41.0]},"properties":{"evaporation":8.99,"temp":29.2,"humidity":60.2,"wind":3.8,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,41.0]},"properties":{"evaporation":9.32,"temp":29.7,"humidity":59.5,"wind":3.9,"sst":31.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,41.0]},"properties":{"evaporation":9.3,"temp":29.1,"humidity":58.8,"wind":3.9,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,41.0]},"properties":{"evaporation":9.54,"temp":29.4,"humidity":58.0,"wind":3.9,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,41.0]},"properties":{"evaporation":10.15,"temp":30.8,"humidity":57.2,"wind":4.0,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,41.0]},"properties":{"evaporation":10.15,"temp":30.3,"humidity":56.5,"wind":4.0,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,41.0]},"properties":{"evaporation":10.07,"temp":29.5,"humidity":55.7,"wind":4.0,"sst":31.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,41.0]},"properties":{"evaporation":10.23,"temp":29.5,"humidity":55.0,"wind":4.0,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,41.0]},"properties":{"evaporation":10.85,"temp":31.0,"humidity":54.3,"wind":4.1,"sst":33.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,41.0]},"properties":{"evaporation":10.77,"temp":30.2,"humidity":53.5,"wind":4.1,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,41.0]},"properties":{"evaporation":10.77,"temp":29.7,"humidity":52.8,"wind":4.1,"sst":32.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,41.0]},"properties":{"evaporation":11.38,"temp":31.1,"humidity":52.0,"wind":4.2,"sst":33.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,41.0]},"properties":{"evaporation":11.35,"temp":30.5,"humidity":51.2,"wind":4.2,"sst":32.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,41.0]},"properties":{"evaporation":11.45,"temp":30.3,"humidity":50.5,"wind":4.2,"sst":32.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,41.3]},"properties":{"evaporation":8.88,"temp":29.7,"humidity":61.1,"wind":3.8,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,41.3]},"properties":{"evaporation":9.26,"temp":30.4,"humidity":60.4,"wind":3.9,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,41.3]},"properties":{"evaporation":8.97,"temp":28.9,"humidity":59.6,"wind":3.9,"sst":30.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,41.3]},"properties":{"evaporation":9.19,"temp":29.1,"humidity":58.9,"wind":3.9,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,41.3]},"properties":{"evaporation":9.79,"temp":30.6,"humidity":58.2,"wind":3.9,"sst":32.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,41.3]},"properties":{"evaporation":9.79,"temp":30.0,"humidity":57.4,"wind":4.0,"sst":31.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,41.3]},"properties":{"evaporation":10.04,"temp":30.3,"humidity":56.6,"wind":4.0,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,41.3]},"properties":{"evaporation":10.32,"temp":30.7,"humidity":55.9,"wind":4.0,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,41.3]},"properties":{"evaporation":10.5,"temp":30.7,"humidity":55.1,"wind":4.1,"sst":32.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,41.3]},"properties":{"evaporation":10.74,"temp":31.0,"humidity":54.4,"wind":4.1,"sst":33.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,41.3]},"properties":{"evaporation":10.42,"temp":29.4,"humidity":53.6,"wind":4.1,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,41.3]},"properties":{"evaporation":11.04,"temp":30.9,"humidity":52.9,"wind":4.2,"sst":33.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,41.3]},"properties":{"evaporation":11.03,"temp":30.3,"humidity":52.1,"wind":4.2,"sst":32.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,41.3]},"properties":{"evaporation":11.09,"temp":30.0,"humidity":51.4,"wind":4.2,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,41.3]},"properties":{"evaporation":11.7,"temp":31.5,"humidity":50.7,"wind":4.2,"sst":34.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,41.6]},"properties":{"evaporation":8.64,"temp":29.3,"humidity":61.3,"wind":3.8,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,41.6]},"properties":{"evaporation":8.88,"temp":29.5,"humidity":60.5,"wind":3.9,"sst":31.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,41.6]},"properties":{"evaporation":8.86,"temp":28.9,"humidity":59.8,"wind":3.9,"sst":30.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,41.6]},"properties":{"evaporation":9.46,"temp":30.4,"humidity":59.0,"wind":3.9,"sst":32.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,41.6]},"properties":{"evaporation":9.58,"temp":30.2,"humidity":58.3,"wind":4.0,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,41.6]},"properties":{"evaporation":9.44,"temp":29.2,"humidity":57.5,"wind":4.0,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,41.6]},"properties":{"evaporation":10.04,"temp":30.7,"humidity":56.8,"wind":4.0,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,41.6]},"properties":{"evaporation":9.75,"temp":29.1,"humidity":56.0,"wind":4.1,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,41.6]},"properties":{"evaporation":10.14,"temp":29.9,"humidity":55.3,"wind":4.1,"sst":32.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,41.6]},"properties":{"evaporation":10.14,"temp":29.4,"humidity":54.6,"wind":4.1,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,41.6]},"properties":{"evaporation":10.34,"temp":29.5,"humidity":53.8,"wind":4.1,"sst":31.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,41.6]},"properties":{"evaporation":10.66,"temp":30.0,"humidity":53.0,"wind":4.2,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,41.6]},"properties":{"evaporation":10.64,"temp":29.4,"humidity":52.3,"wind":4.2,"sst":31.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,41.6]},"properties":{"evaporation":10.89,"temp":29.7,"humidity":51.5,"wind":4.2,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,41.6]},"properties":{"evaporation":11.51,"temp":31.2,"humidity":50.8,"wind":4.3,"sst":33.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.6,41.9]},"properties":{"evaporation":8.49,"temp":29.1,"humidity":61.5,"wind":3.9,"sst":30.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[49.9,41.9]},"properties":{"evaporation":8.46,"temp":28.5,"humidity":60.7,"wind":3.9,"sst":30.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,41.9]},"properties":{"evaporation":8.78,"temp":29.0,"humidity":59.9,"wind":3.9,"sst":30.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,41.9]},"properties":{"evaporation":9.02,"temp":29.3,"humidity":59.2,"wind":3.9,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,41.9]},"properties":{"evaporation":9.16,"temp":29.2,"humidity":58.5,"wind":4.0,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,41.9]},"properties":{"evaporation":9.63,"temp":30.2,"humidity":57.7,"wind":4.0,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,41.9]},"properties":{"evaporation":9.87,"temp":30.5,"humidity":57.0,"wind":4.0,"sst":32.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,41.9]},"properties":{"evaporation":9.57,"temp":28.9,"humidity":56.2,"wind":4.1,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,41.9]},"properties":{"evaporation":9.72,"temp":28.9,"humidity":55.5,"wind":4.1,"sst":31.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,41.9]},"properties":{"evaporation":9.98,"temp":29.2,"humidity":54.7,"wind":4.1,"sst":31.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,41.9]},"properties":{"evaporation":10.27,"temp":29.6,"humidity":54.0,"wind":4.2,"sst":31.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,41.9]},"properties":{"evaporation":10.25,"temp":29.0,"humidity":53.2,"wind":4.2,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,41.9]},"properties":{"evaporation":10.83,"temp":30.4,"humidity":52.4,"wind":4.2,"sst":32.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,41.9]},"properties":{"evaporation":11.07,"temp":30.7,"humidity":51.7,"wind":4.2,"sst":33.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.8,41.9]},"properties":{"evaporation":10.95,"temp":29.7,"humidity":51.0,"wind":4.3,"sst":32.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,42.2]},"properties":{"evaporation":8.69,"temp":29.1,"humidity":60.1,"wind":3.9,"sst":30.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,42.2]},"properties":{"evaporation":9.04,"temp":29.7,"humidity":59.4,"wind":4.0,"sst":31.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,42.2]},"properties":{"evaporation":8.81,"temp":28.4,"humidity":58.6,"wind":4.0,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,42.2]},"properties":{"evaporation":9.27,"temp":29.4,"humidity":57.9,"wind":4.0,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,42.2]},"properties":{"evaporation":9.4,"temp":29.3,"humidity":57.1,"wind":4.0,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,42.2]},"properties":{"evaporation":9.58,"temp":29.3,"humidity":56.3,"wind":4.1,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,42.2]},"properties":{"evaporation":9.98,"temp":30.1,"humidity":55.6,"wind":4.1,"sst":32.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,42.2]},"properties":{"evaporation":9.95,"temp":29.5,"humidity":54.9,"wind":4.1,"sst":31.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,42.2]},"properties":{"evaporation":10.25,"temp":29.9,"humidity":54.1,"wind":4.2,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,42.2]},"properties":{"evaporation":10.49,"temp":30.2,"humidity":53.4,"wind":4.2,"sst":32.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,42.2]},"properties":{"evaporation":10.47,"temp":29.6,"humidity":52.6,"wind":4.2,"sst":31.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,42.2]},"properties":{"evaporation":10.74,"temp":29.9,"humidity":51.9,"wind":4.3,"sst":32.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,42.5]},"properties":{"evaporation":8.61,"temp":29.2,"humidity":60.2,"wind":3.9,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,42.5]},"properties":{"evaporation":8.88,"temp":29.5,"humidity":59.5,"wind":4.0,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,42.5]},"properties":{"evaporation":9.0,"temp":29.4,"humidity":58.8,"wind":4.0,"sst":31.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,42.5]},"properties":{"evaporation":8.86,"temp":28.4,"humidity":58.0,"wind":4.0,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,42.5]},"properties":{"evaporation":8.98,"temp":28.2,"humidity":57.2,"wind":4.1,"sst":30.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,42.5]},"properties":{"evaporation":9.41,"temp":29.1,"humidity":56.5,"wind":4.1,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,42.5]},"properties":{"evaporation":9.53,"temp":29.0,"humidity":55.8,"wind":4.1,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,42.5]},"properties":{"evaporation":9.8,"temp":29.3,"humidity":55.0,"wind":4.2,"sst":31.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,42.5]},"properties":{"evaporation":10.08,"temp":29.7,"humidity":54.2,"wind":4.2,"sst":31.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,42.5]},"properties":{"evaporation":10.08,"temp":29.2,"humidity":53.5,"wind":4.2,"sst":31.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,42.5]},"properties":{"evaporation":10.67,"temp":30.6,"humidity":52.7,"wind":4.2,"sst":32.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,42.5]},"properties":{"evaporation":10.78,"temp":30.4,"humidity":52.0,"wind":4.3,"sst":32.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,42.8]},"properties":{"evaporation":8.28,"temp":28.4,"humidity":60.4,"wind":4.0,"sst":30.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,42.8]},"properties":{"evaporation":8.65,"temp":29.1,"humidity":59.6,"wind":4.0,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,42.8]},"properties":{"evaporation":8.65,"temp":28.6,"humidity":58.9,"wind":4.0,"sst":30.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,42.8]},"properties":{"evaporation":9.11,"temp":29.6,"humidity":58.1,"wind":4.0,"sst":31.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,42.8]},"properties":{"evaporation":9.23,"temp":29.4,"humidity":57.4,"wind":4.1,"sst":31.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,42.8]},"properties":{"evaporation":9.06,"temp":28.3,"humidity":56.6,"wind":4.1,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,42.8]},"properties":{"evaporation":9.18,"temp":28.2,"humidity":55.9,"wind":4.1,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,42.8]},"properties":{"evaporation":9.45,"temp":28.5,"humidity":55.2,"wind":4.2,"sst":30.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,42.8]},"properties":{"evaporation":9.73,"temp":28.9,"humidity":54.4,"wind":4.2,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,42.8]},"properties":{"evaporation":9.74,"temp":28.4,"humidity":53.6,"wind":4.2,"sst":30.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,42.8]},"properties":{"evaporation":10.42,"temp":30.1,"humidity":52.9,"wind":4.3,"sst":32.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,42.8]},"properties":{"evaporation":10.43,"temp":29.6,"humidity":52.1,"wind":4.3,"sst":32.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,43.1]},"properties":{"evaporation":8.38,"temp":29.1,"humidity":60.5,"wind":4.0,"sst":30.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,43.1]},"properties":{"evaporation":8.62,"temp":29.4,"humidity":59.8,"wind":4.0,"sst":31.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,43.1]},"properties":{"evaporation":8.62,"temp":28.9,"humidity":59.1,"wind":4.0,"sst":30.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,43.1]},"properties":{"evaporation":8.62,"temp":28.3,"humidity":58.3,"wind":4.1,"sst":30.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,43.1]},"properties":{"evaporation":8.88,"temp":28.6,"humidity":57.5,"wind":4.1,"sst":30.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,43.1]},"properties":{"evaporation":9.12,"temp":28.9,"humidity":56.8,"wind":4.1,"sst":30.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,43.1]},"properties":{"evaporation":9.54,"temp":29.7,"humidity":56.0,"wind":4.2,"sst":31.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,43.1]},"properties":{"evaporation":9.54,"temp":29.2,"humidity":55.3,"wind":4.2,"sst":31.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,43.1]},"properties":{"evaporation":9.83,"temp":29.6,"humidity":54.5,"wind":4.2,"sst":31.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,43.1]},"properties":{"evaporation":10.07,"temp":29.9,"humidity":53.8,"wind":4.2,"sst":32.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,43.1]},"properties":{"evaporation":10.07,"temp":29.3,"humidity":53.0,"wind":4.3,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,43.1]},"properties":{"evaporation":10.07,"temp":28.8,"humidity":52.3,"wind":4.3,"sst":31.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.2,43.4]},"properties":{"evaporation":8.2,"temp":28.9,"humidity":60.7,"wind":4.0,"sst":30.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,43.4]},"properties":{"evaporation":8.21,"temp":28.4,"humidity":60.0,"wind":4.0,"sst":30.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,43.4]},"properties":{"evaporation":8.45,"temp":28.7,"humidity":59.2,"wind":4.0,"sst":30.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,43.4]},"properties":{"evaporation":8.45,"temp":28.1,"humidity":58.5,"wind":4.1,"sst":30.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,43.4]},"properties":{"evaporation":8.88,"temp":29.0,"humidity":57.7,"wind":4.1,"sst":31.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,43.4]},"properties":{"evaporation":8.71,"temp":27.9,"humidity":56.9,"wind":4.1,"sst":29.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,43.4]},"properties":{"evaporation":9.12,"temp":28.7,"humidity":56.2,"wind":4.2,"sst":30.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,43.4]},"properties":{"evaporation":9.13,"temp":28.2,"humidity":55.5,"wind":4.2,"sst":30.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.6,43.4]},"properties":{"evaporation":9.65,"temp":29.4,"humidity":54.7,"wind":4.2,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.9,43.4]},"properties":{"evaporation":9.68,"temp":28.9,"humidity":54.0,"wind":4.3,"sst":31.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.2,43.4]},"properties":{"evaporation":9.99,"temp":29.4,"humidity":53.2,"wind":4.3,"sst":31.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[53.5,43.4]},"properties":{"evaporation":10.23,"temp":29.7,"humidity":52.5,"wind":4.3,"sst":32.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,43.7]},"properties":{"evaporation":8.12,"temp":28.5,"humidity":60.1,"wind":4.0,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,43.7]},"properties":{"evaporation":8.21,"temp":28.2,"humidity":59.4,"wind":4.1,"sst":30.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,43.7]},"properties":{"evaporation":8.07,"temp":27.2,"humidity":58.6,"wind":4.1,"sst":29.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,43.7]},"properties":{"evaporation":8.67,"temp":28.7,"humidity":57.9,"wind":4.1,"sst":30.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,43.7]},"properties":{"evaporation":8.97,"temp":29.1,"humidity":57.1,"wind":4.2,"sst":31.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,43.7]},"properties":{"evaporation":8.77,"temp":27.9,"humidity":56.4,"wind":4.2,"sst":30.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,43.7]},"properties":{"evaporation":9.38,"temp":29.4,"humidity":55.6,"wind":4.2,"sst":31.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,44.0]},"properties":{"evaporation":8.08,"temp":28.7,"humidity":60.2,"wind":4.0,"sst":30.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,44.0]},"properties":{"evaporation":8.1,"temp":28.2,"humidity":59.5,"wind":4.1,"sst":30.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,44.0]},"properties":{"evaporation":8.32,"temp":28.4,"humidity":58.8,"wind":4.1,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,44.0]},"properties":{"evaporation":8.17,"temp":27.4,"humidity":58.0,"wind":4.1,"sst":29.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,44.0]},"properties":{"evaporation":8.63,"temp":28.3,"humidity":57.2,"wind":4.2,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,44.0]},"properties":{"evaporation":9.02,"temp":29.1,"humidity":56.5,"wind":4.2,"sst":31.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,44.0]},"properties":{"evaporation":9.03,"temp":28.6,"humidity":55.8,"wind":4.2,"sst":30.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,44.3]},"properties":{"evaporation":7.77,"temp":28.0,"humidity":60.4,"wind":4.1,"sst":29.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,44.3]},"properties":{"evaporation":7.78,"temp":27.5,"humidity":59.7,"wind":4.1,"sst":29.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,44.3]},"properties":{"evaporation":8.0,"temp":27.7,"humidity":58.9,"wind":4.1,"sst":29.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,44.3]},"properties":{"evaporation":8.36,"temp":28.3,"humidity":58.1,"wind":4.2,"sst":30.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,44.3]},"properties":{"evaporation":8.18,"temp":27.2,"humidity":57.4,"wind":4.2,"sst":29.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,44.3]},"properties":{"evaporation":8.58,"temp":28.0,"humidity":56.6,"wind":4.2,"sst":30.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,44.3]},"properties":{"evaporation":8.59,"temp":27.5,"humidity":55.9,"wind":4.2,"sst":29.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,44.6]},"properties":{"evaporation":7.33,"temp":26.9,"humidity":60.5,"wind":4.1,"sst":28.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,44.6]},"properties":{"evaporation":7.69,"temp":27.6,"humidity":59.8,"wind":4.1,"sst":29.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,44.6]},"properties":{"evaporation":7.56,"temp":26.6,"humidity":59.0,"wind":4.1,"sst":28.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,44.6]},"properties":{"evaporation":8.18,"temp":28.1,"humidity":58.3,"wind":4.2,"sst":30.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,44.6]},"properties":{"evaporation":8.46,"temp":28.5,"humidity":57.5,"wind":4.2,"sst":30.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,44.6]},"properties":{"evaporation":8.25,"temp":27.3,"humidity":56.8,"wind":4.2,"sst":29.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,44.6]},"properties":{"evaporation":8.88,"temp":28.8,"humidity":56.1,"wind":4.3,"sst":31.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.5,44.9]},"properties":{"evaporation":7.07,"temp":26.4,"humidity":60.7,"wind":4.1,"sst":28.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,44.9]},"properties":{"evaporation":7.67,"temp":27.9,"humidity":60.0,"wind":4.1,"sst":29.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,44.9]},"properties":{"evaporation":7.67,"temp":27.3,"humidity":59.2,"wind":4.2,"sst":29.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,44.9]},"properties":{"evaporation":7.92,"temp":27.6,"humidity":58.5,"wind":4.2,"sst":29.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,44.9]},"properties":{"evaporation":8.2,"temp":28.0,"humidity":57.7,"wind":4.2,"sst":30.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,44.9]},"properties":{"evaporation":8.23,"temp":27.6,"humidity":57.0,"wind":4.2,"sst":29.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.3,44.9]},"properties":{"evaporation":8.62,"temp":28.3,"humidity":56.2,"wind":4.3,"sst":30.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,45.2]},"properties":{"evaporation":7.32,"temp":27.1,"humidity":60.1,"wind":4.1,"sst":29.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,45.2]},"properties":{"evaporation":7.32,"temp":26.5,"humidity":59.4,"wind":4.2,"sst":28.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,45.2]},"properties":{"evaporation":7.92,"temp":28.0,"humidity":58.6,"wind":4.2,"sst":30.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,45.2]},"properties":{"evaporation":7.84,"temp":27.2,"humidity":57.8,"wind":4.2,"sst":29.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,45.2]},"properties":{"evaporation":8.02,"temp":27.2,"humidity":57.1,"wind":4.3,"sst":29.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,45.5]},"properties":{"evaporation":6.92,"temp":26.1,"humidity":60.3,"wind":4.2,"sst":28.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,45.5]},"properties":{"evaporation":7.51,"temp":27.5,"humidity":59.5,"wind":4.2,"sst":29.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,45.5]},"properties":{"evaporation":7.75,"temp":27.8,"humidity":58.8,"wind":4.2,"sst":29.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,45.5]},"properties":{"evaporation":7.43,"temp":26.2,"humidity":58.0,"wind":4.2,"sst":28.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,45.5]},"properties":{"evaporation":8.09,"temp":27.8,"humidity":57.2,"wind":4.3,"sst":29.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,45.8]},"properties":{"evaporation":7.17,"temp":27.3,"humidity":60.4,"wind":4.2,"sst":29.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,45.8]},"properties":{"evaporation":7.16,"temp":26.7,"humidity":59.6,"wind":4.2,"sst":28.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,45.8]},"properties":{"evaporation":7.4,"temp":27.0,"humidity":58.9,"wind":4.2,"sst":29.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,45.8]},"properties":{"evaporation":7.7,"temp":27.4,"humidity":58.1,"wind":4.3,"sst":29.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,45.8]},"properties":{"evaporation":7.47,"temp":26.1,"humidity":57.4,"wind":4.3,"sst":28.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,46.1]},"properties":{"evaporation":6.91,"temp":26.8,"humidity":60.6,"wind":4.2,"sst":28.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,46.1]},"properties":{"evaporation":6.89,"temp":26.2,"humidity":59.8,"wind":4.2,"sst":28.1}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,46.1]},"properties":{"evaporation":6.87,"temp":25.6,"humidity":59.0,"wind":4.2,"sst":27.6}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,46.1]},"properties":{"evaporation":7.17,"temp":26.0,"humidity":58.3,"wind":4.3,"sst":28.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,46.1]},"properties":{"evaporation":7.44,"temp":26.4,"humidity":57.5,"wind":4.3,"sst":28.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,46.4]},"properties":{"evaporation":6.5,"temp":25.8,"humidity":60.7,"wind":4.2,"sst":27.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,46.4]},"properties":{"evaporation":6.96,"temp":26.8,"humidity":60.0,"wind":4.2,"sst":28.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,46.4]},"properties":{"evaporation":6.71,"temp":25.4,"humidity":59.2,"wind":4.3,"sst":27.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,46.4]},"properties":{"evaporation":7.0,"temp":25.8,"humidity":58.4,"wind":4.3,"sst":27.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,46.4]},"properties":{"evaporation":7.63,"temp":27.4,"humidity":57.7,"wind":4.3,"sst":29.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,46.7]},"properties":{"evaporation":6.14,"temp":25.0,"humidity":60.9,"wind":4.2,"sst":26.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,46.7]},"properties":{"evaporation":6.61,"temp":26.0,"humidity":60.1,"wind":4.2,"sst":27.9}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,46.7]},"properties":{"evaporation":6.99,"temp":26.7,"humidity":59.4,"wind":4.3,"sst":28.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,46.7]},"properties":{"evaporation":7.15,"temp":26.7,"humidity":58.6,"wind":4.3,"sst":28.7}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,46.7]},"properties":{"evaporation":7.31,"temp":26.7,"humidity":57.9,"wind":4.3,"sst":28.8}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,47.0]},"properties":{"evaporation":6.36,"temp":26.1,"humidity":61.0,"wind":4.2,"sst":28.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,47.0]},"properties":{"evaporation":6.37,"temp":25.5,"humidity":60.2,"wind":4.3,"sst":27.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,47.0]},"properties":{"evaporation":6.37,"temp":25.0,"humidity":59.5,"wind":4.3,"sst":27.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,47.0]},"properties":{"evaporation":6.65,"temp":25.4,"humidity":58.7,"wind":4.3,"sst":27.4}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,47.0]},"properties":{"evaporation":7.04,"temp":26.2,"humidity":58.0,"wind":4.3,"sst":28.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[50.8,47.3]},"properties":{"evaporation":5.95,"temp":25.1,"humidity":61.2,"wind":4.2,"sst":27.0}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.1,47.3]},"properties":{"evaporation":6.28,"temp":25.6,"humidity":60.4,"wind":4.3,"sst":27.5}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.4,47.3]},"properties":{"evaporation":6.65,"temp":26.3,"humidity":59.6,"wind":4.3,"sst":28.3}},{"type":"Feature","geometry":{"type":"Point","coordinates":[51.7,47.3]},"properties":{"evaporation":6.48,"temp":25.2,"humidity":58.9,"wind":4.3,"sst":27.2}},{"type":"Feature","geometry":{"type":"Point","coordinates":[52.0,47.3]},"properties":{"evaporation":7.14,"temp":26.8,"humidity":58.1,"wind":4.4,"sst":28.9}}]}
+
+// ══════════════════════════════════════════
+// MAP INIT
+// ══════════════════════════════════════════
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/dark-v11',
+  center: [51.5, 42.0],
+  zoom: 5,
+  pitch: 0,
+  bearing: 0,
+  antialias: true
+});
+
+map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'bottom-right');
+map.addControl(new mapboxgl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+let layerState = { heatmap: true, points: true };
+let is3D = false;
+let indexChart = null, humidChart = null;
+
+// ── Utility
+function getColor(idx) {
+  return idx >= 70 ? '#00e676' : idx >= 40 ? '#ffab40' : '#ff5252';
+}
+function getLabel(idx) {
+  return idx >= 70 ? '🟢 ТИІМДІ' : idx >= 40 ? '🟡 ОРТАША' : '🔴 ТИІМСІЗ';
+}
+function dewPoint(t, h) {
+  return +(t - ((100 - h) / 5)).toFixed(1);
+}
+function condensationIndex(temp, humidity, wind) {
+  const h = humidity;
+  const t = Math.max(0, (45 - temp) / 45 * 100);
+  const w = Math.min(wind * 5, 100);
+  return +(h * 0.5 + t * 0.3 + w * 0.2).toFixed(1);
+}
+function bestTech(temp, humidity, wind) {
+  const dp = dewPoint(temp, humidity);
+  if (temp - dp < 5) return 'Радиациялық салқындату';
+  if (humidity > 70)  return 'Fog collector торлары';
+  if (wind > 5)       return 'Ылғалды ауа ағыны';
+  return 'Ультрадыбыстық ионизатор';
+}
+
+// ── Tab switching
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── Layer toggle
+function toggleLayer(name) {
+  layerState[name] = !layerState[name];
+  document.getElementById('btn-' + name).classList.toggle('active', layerState[name]);
+  if (name === 'heatmap') {
+    if (map.getLayer('nasa-heatmap')) {
+      map.setLayoutProperty('nasa-heatmap', 'visibility', layerState.heatmap ? 'visible' : 'none');
+    }
+  }
+  if (name === 'points') {
+    if (map.getLayer('nasa-critical')) {
+      map.setLayoutProperty('nasa-critical', 'visibility', layerState.points ? 'visible' : 'none');
+    }
+    if (map.getLayer('nasa-critical-labels')) {
+      map.setLayoutProperty('nasa-critical-labels', 'visibility', layerState.points ? 'visible' : 'none');
+    }
+  }
+}
+
+// ── 3D toggle
+function toggle3D() {
+  is3D = !is3D;
+  document.getElementById('btn-3d').classList.toggle('active', is3D);
+  map.easeTo({
+    pitch: is3D ? 50 : 0,
+    bearing: is3D ? -20 : 0,
+    duration: 1000
+  });
+}
+
+// ── Load NASA layers
+map.on('load', () => {
+  map.addSource('nasa', { type: 'geojson', data: NASA_DATA });
+
+  // WebGL Heatmap layer — Windy style smooth
+  map.addLayer({
+    id: 'nasa-heatmap',
+    type: 'heatmap',
+    source: 'nasa',
+    maxzoom: 12,
+    paint: {
+      'heatmap-weight': [
+        'interpolate', ['linear'],
+        ['get', 'evaporation'],
+        0, 0,
+        17, 1
+      ],
+      'heatmap-intensity': [
+        'interpolate', ['linear'], ['zoom'],
+        0, 2, 5, 3, 9, 5
+      ],
+      'heatmap-color': [
+        'interpolate', ['linear'],
+        ['heatmap-density'],
+        0,    'rgba(0,0,0,0)',
+        0.05, 'rgba(26,152,80,0.3)',
+        0.2,  'rgba(26,152,80,0.7)',
+        0.35, 'rgba(145,207,96,0.85)',
+        0.5,  'rgba(254,224,139,0.9)',
+        0.7,  'rgba(252,141,89,0.95)',
+        0.85, 'rgba(215,48,39,1)',
+        1.0,  'rgba(165,0,38,1)'
+      ],
+      'heatmap-radius': [
+        'interpolate', ['linear'], ['zoom'],
+        0, 60,
+        4, 80,
+        7, 100,
+        9, 130
+      ],
+      'heatmap-opacity': [
+        'interpolate', ['linear'], ['zoom'],
+        0, 0.95, 9, 0.85
+      ]
+    }
+  });
+
+  // Critical points — TOP evaporation (>13 мм/күн)
+  map.addLayer({
+    id: 'nasa-critical',
+    type: 'circle',
+    source: 'nasa',
+    filter: ['>', ['get', 'evaporation'], 13],
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'],
+        ['get', 'evaporation'],
+        13, 8, 17, 14
+      ],
+      'circle-color': '#ff5252',
+      'circle-opacity': 0.9,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ff8a80',
+      'circle-blur': 0.15
+    }
+  });
+
+  // Labels for critical points
+  map.addLayer({
+    id: 'nasa-critical-labels',
+    type: 'symbol',
+    source: 'nasa',
+    filter: ['>', ['get', 'evaporation'], 13],
+    layout: {
+      'text-field': ['concat', ['to-string', ['get', 'evaporation']], ' мм'],
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+      'text-size': 10,
+      'text-offset': [0, -1.5],
+      'text-anchor': 'bottom'
+    },
+    paint: {
+      'text-color': '#ff8a80',
+      'text-halo-color': '#060d18',
+      'text-halo-width': 1.5
+    }
+  });
+
+  // Popup on click
+  const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
+
+  map.on('click', 'nasa-critical', (e) => {
+    const p = e.features[0].properties;
+    const coords = e.features[0].geometry.coordinates;
+    const evap = p.evaporation;
+    const color = evap >= 14 ? '#ff5252' : evap >= 10 ? '#ffab40' : '#00e676';
+
+    popup.setLngLat(coords)
+      .setHTML(`
+        <div class="popup-title">⚠️ Критикалық аймақ</div>
+        <div class="popup-row"><span>💨 Булану</span><b>${evap} мм/күн</b></div>
+        <div class="popup-row"><span>🌡️ Ауа темп</span><b>${p.temp}°C</b></div>
+        <div class="popup-row"><span>🌊 Су темп (SST)</span><b>${p.sst}°C</b></div>
+        <div class="popup-row"><span>💧 Ылғалдылық</span><b>${p.humidity}%</b></div>
+        <div class="popup-row"><span>💨 Жел</span><b>${p.wind} м/с</b></div>
+        <div class="popup-badge" style="background:rgba(255,82,82,0.15);color:${color};border:1px solid ${color}">
+          🔴 ЖОҒАРЫ БУЛАНУ АЙМАҒЫ
+        </div>
+      `)
+      .addTo(map);
+  });
+
+  map.on('mouseenter', 'nasa-critical', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'nasa-critical', () => {
+    map.getCanvas().style.cursor = '';
+    popup.remove();
+  });
+});
+
+// ══════════════════════════════════════════
+// WEATHER API
+// ══════════════════════════════════════════
+async function loadWeather() {
+  try {
+    const res = await fetch('/api/weather');
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'API қатесі');
+
+    const data = json.data;
+    const best = data.reduce((a, b) => a.index > b.index ? a : b);
+
+    document.getElementById('timeLabel').textContent =
+      new Date(json.time).toLocaleString('ru-RU');
+
+    document.getElementById('bestBanner').innerHTML =
+      `🏆 ЕҢ ТИІМДІ: <span class="highlight">${best.city}</span> &nbsp;·&nbsp; ` +
+      `Индекс: <span class="highlight">${best.index}%</span> &nbsp;·&nbsp; ` +
+      `⚙️ <span class="accent">${best.tech}</span>`;
+
+    renderCards(data);
+    renderAI(data, best);
+    renderCharts(data);
+  } catch (e) {
+    document.getElementById('bestBanner').innerHTML =
+      `<span style="color:var(--red)">❌ API қатесі: ${e.message}</span>`;
+  }
+}
+
+function renderCards(data) {
+  const container = document.getElementById('cards');
+  container.innerHTML = '';
+  data.forEach(d => {
+    const color = getColor(d.index);
+    const label = getLabel(d.index);
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.setProperty('--card-color', color);
+    div.innerHTML = `
+      <div class="card-header">
+        <div>
+          <div class="card-city">📍 ${d.city}</div>
+          <div class="card-status" style="color:${color}">${label}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="card-index" style="color:${color}">${d.index}%</div>
+        </div>
+      </div>
+      <div class="card-grid">
+        <div class="card-stat">🌡️ <b>${d.temp}°C</b></div>
+        <div class="card-stat">💧 <b>${d.humidity}%</b></div>
+        <div class="card-stat">🌬️ <b>${d.wind} м/с</b></div>
+        <div class="card-stat">🌫️ <b>${d.dew}°C</b></div>
+      </div>
+      <div class="card-tech">⚙️ ${d.tech}</div>`;
+    container.appendChild(div);
+  });
+}
+
+function renderAI(data, best) {
+  const dp = dewPoint(best.temp, best.humidity);
+  const decisions = [
+    { tech: '🌬️ Fog collector торлары',      cond: 'Ылғал >65% ЖӘНЕ Жел >3 м/с',   on: best.humidity > 65 && best.wind > 3 },
+    { tech: '❄️ Радиациялық салқындату',      cond: 'Шық айырмасы <6°C',             on: (best.temp - dp) < 6 },
+    { tech: '💨 Ылғалды ауа ағыны',           cond: 'Жел >5 м/с ЖӘНЕ Ылғал >50%',   on: best.wind > 5 && best.humidity > 50 },
+    { tech: '⚡ Ультрадыбыстық ионизатор',    cond: 'Булану >10 мм/күн (NASA)',       on: false },
+    { tech: '☀️ Күн+Жел энергиясы',           cond: 'Әрдайым қосулы',                on: true },
+  ];
+  const active = decisions.filter(d => d.on);
+
+  document.getElementById('aiText').innerHTML = `
+    <b>${best.city}</b> аймағында конденсация индексі <b>${best.index}%</b>.<br>
+    Температура ${best.temp}°C, ылғалдылық ${best.humidity}%, жел ${best.wind} м/с.<br>
+    Шық нүктесі: ${dp}°C · AI шешімі: <b style="color:${getColor(best.index)}">${getLabel(best.index)}</b><br>
+    Іске қосылатын: <b>${active.map(d => d.tech).join(', ')}</b>`;
+
+  document.getElementById('decisionTable').innerHTML = decisions.map(d => `
+    <div class="decision-row">
+      <div class="dec-tech">${d.tech}</div>
+      <div class="dec-cond">${d.cond}</div>
+      <div class="dec-status ${d.on ? 'on' : 'off'}">${d.on ? '✅ ҚОС' : '⛔ ӨШ'}</div>
+    </div>`).join('');
+
+  // NASA stats
+  const evaps = NASA_DATA.features.map(f => f.properties.evaporation);
+  const avg = (evaps.reduce((a, b) => a + b, 0) / evaps.length).toFixed(2);
+  document.getElementById('nasaStats').innerHTML = `
+    <div class="nasa-stat"><div class="nasa-val" style="color:var(--red)">${Math.max(...evaps)}</div><div class="nasa-label">💨 Макс булану мм/күн</div></div>
+    <div class="nasa-stat"><div class="nasa-val">${avg}</div><div class="nasa-label">💨 Орташа мм/күн</div></div>
+    <div class="nasa-stat"><div class="nasa-val" style="color:var(--green)">${Math.min(...evaps)}</div><div class="nasa-label">💨 Мин булану мм/күн</div></div>
+    <div class="nasa-stat"><div class="nasa-val">${evaps.length}</div><div class="nasa-label">📍 NASA нүктелері</div></div>`;
+}
+
+function renderCharts(data) {
+  const opts = {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#7ea8cc', font: { size: 10 } } } },
+    scales: {
+      x: { ticks: { color: '#7ea8cc', font: { size: 10 } }, grid: { color: '#1a3356' } },
+      y: { ticks: { color: '#7ea8cc', font: { size: 10 } }, grid: { color: '#1a3356' } }
+    }
+  };
+  const cities = data.map(d => d.city);
+
+  if (indexChart) indexChart.destroy();
+  indexChart = new Chart(document.getElementById('indexChart'), {
+    type: 'bar',
+    data: {
+      labels: cities,
+      datasets: [{ label: 'Индекс (%)', data: data.map(d => d.index),
+        backgroundColor: data.map(d => getColor(d.index) + 'cc'), borderRadius: 4 }]
+    },
+    options: { ...opts, scales: { ...opts.scales, y: { ...opts.scales.y, max: 100 } } }
+  });
+
+  if (humidChart) humidChart.destroy();
+  humidChart = new Chart(document.getElementById('humidChart'), {
+    type: 'bar',
+    data: {
+      labels: cities,
+      datasets: [
+        { label: 'Ылғал (%)', data: data.map(d => d.humidity), backgroundColor: '#0091eaaa', borderRadius: 4 },
+        { label: 'Темп (°C)', data: data.map(d => d.temp),     backgroundColor: '#ff525266', borderRadius: 4 }
+      ]
+    },
+    options: opts
+  });
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+async function init() {
+  try {
+    document.getElementById('loaderText').textContent = 'Mapbox GL WebGL жүктелуде...';
+    // Wait for map style
+    await new Promise(resolve => {
+      if (map.isStyleLoaded()) resolve();
+      else map.on('load', resolve);
+    });
+    document.getElementById('loaderText').textContent = 'Ауа-райы деректері алынуда...';
+    await loadWeather();
+    document.getElementById('loader').style.display = 'none';
+    setInterval(loadWeather, 10 * 60 * 1000);
+  } catch(e) {
+    document.getElementById('loader').innerHTML =
+      `<div style="color:var(--red);padding:24px;text-align:center">❌ Қате: ${e.message}<br><br>
+       <small style="color:var(--muted)">Mapbox токенін тексеріңіз</small></div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/caspian_map.html" },
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ]
+}
