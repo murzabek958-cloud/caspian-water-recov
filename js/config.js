@@ -4,7 +4,7 @@ const Config = {
     MAPBOX: {
         TOKEN: window.ENV?.MAPBOX_ACCESS_TOKEN || 
                localStorage.getItem('MAPBOX_ACCESS_TOKEN') || 
-               'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA',
+               'pk.eyJ1IjoibWFudXJrYXlldiIsImEiOiJjbXNjdGx3YWMwd3o1MnpzNXd4ZTB3a20xIn0.TFkYBesFueHqrCjX6wzUSw',
         STYLE: 'mapbox://styles/mapbox/satellite-streets-v11'
     },
     
