@@ -103,7 +103,7 @@ class DataManager {
         // Бұл резерв әдіс - егер JSON файлы жоқ болса
         for (let lat = 36.5; lat <= 47.0; lat += 1.17) {
             for (let lon = 49.0; lon <= 54.5; lon += 0.39) {
-                // Skip points outside the sea (using improved boundary check)
+                // Skip points outside the sea (basic filtering)
                 if (this.isInCaspianSea(lat, lon)) {
                     const evaporation = this.generateEvaporationValue(lat, lon);
                     const sst = this.generateSST(lat, lon);
@@ -132,38 +132,41 @@ class DataManager {
         return points;
     }
 
-    // Improved Caspian Sea boundary check
+    // Check if coordinates are likely in Caspian Sea
+    // Uses latitude bands to approximate the sea's actual coastline shape
+    // (narrows in the middle near Absheron/Turkmenbashi, widens in the north)
     isInCaspianSea(lat, lng) {
-        // Caspian Sea shape approximation using latitude bands
-        // Each band narrows the longitude range to follow the sea's actual coastline
-        
         if (lat < 36.5 || lat > 47.0) return false;
-        
-        // Southern part (Iran coast) - narrower, centered around 50-52
-        if (lat >= 36.5 && lat < 38.5) {
+
+        // Southern part (Iran coast)
+        if (lat >= 36.5 && lat < 38.0) {
+            return lng >= 48.8 && lng <= 53.0;
+        }
+        // South-central (Turkmenistan/Azerbaijan)
+        if (lat >= 38.0 && lat < 40.0) {
             return lng >= 48.5 && lng <= 53.5;
         }
-        // South-central (Turkmenistan/Azerbaijan) 
-        if (lat >= 38.5 && lat < 40.5) {
-            return lng >= 48.5 && lng <= 54.0;
+        // Central (Baku/Absheron latitude - narrowest)
+        if (lat >= 40.0 && lat < 41.5) {
+            return lng >= 48.5 && lng <= 52.0;
         }
-        // Central (Baku latitude, narrows near Absheron)
-        if (lat >= 40.5 && lat < 42.5) {
-            return lng >= 47.5 && lng <= 53.5;
+        // Mid (Turkmenbashi/Aktau latitude)
+        if (lat >= 41.5 && lat < 43.0) {
+            return lng >= 48.8 && lng <= 51.5;
         }
-        // Mid-north (narrowest point of the sea)
-        if (lat >= 42.5 && lat < 44.0) {
-            return lng >= 47.5 && lng <= 52.5;
+        // Mid-north (Kazakhstan coast starts, sea narrows on east side)
+        if (lat >= 43.0 && lat < 44.5) {
+            return lng >= 47.5 && lng <= 51.0;
         }
-        // Northern (Kazakhstan coast, wider, shallower)
-        if (lat >= 44.0 && lat < 45.5) {
-            return lng >= 47.0 && lng <= 53.0;
+        // Northern (near Atyrau, sea widens but east edge pulls back)
+        if (lat >= 44.5 && lat < 46.0) {
+            return lng >= 47.0 && lng <= 50.5;
         }
-        // Far north (widest, shallowest part near Atyrau/Volga delta)
-        if (lat >= 45.5 && lat <= 47.0) {
-            return lng >= 47.0 && lng <= 51.5;
+        // Far north (Volga delta, shallowest/widest north-south but narrow east)
+        if (lat >= 46.0 && lat <= 47.0) {
+            return lng >= 47.0 && lng <= 49.5;
         }
-        
+
         return false;
     }
 
@@ -376,4 +379,6 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = DataManager;
 } else {
     window.DataManager = DataManager;
-            }
+    }
+
+                
