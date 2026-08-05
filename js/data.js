@@ -18,20 +18,34 @@ class DataManager {
             }
             const jsonData = await response.json();
             
-            // FeatureCollection-нан нүктелерді алу
-            this.gridPoints = jsonData.features.map(feature => ({
-                id: feature.properties.id,
-                latitude: feature.properties.latitude,
-                longitude: feature.properties.longitude,
-                evaporation: feature.properties.evaporation,
-                sst: feature.properties.sst,
-                airTemperature: feature.properties.temperature,
-                windSpeed: feature.properties.wind,
-                humidity: feature.properties.humidity,
-                condensationIndex: feature.properties.condensationIndex,
-                riskLevel: feature.properties.riskLevel,
-                recommendedTechnology: feature.properties.recommendedTechnology,
-                timestamp: feature.properties.timestamp || new Date().toISOString()
+            // Бұл форматта болса: [{"lat": 36.5, "lon": 49.0, ...}]
+            this.gridPoints = jsonData.map(point => ({
+                id: `point_${point.lat}_${point.lon}`,
+                latitude: point.lat,
+                longitude: point.lon,
+                evaporation: point.evaporation,
+                sst: point.sst,
+                airTemperature: point.temp,
+                windSpeed: point.wind,
+                humidity: point.humidity,
+                condensationIndex: this.calculateCondensationIndex(
+                    point.humidity,
+                    point.temp,
+                    point.wind,
+                    point.evaporation
+                ),
+                riskLevel: this.getRiskLevel(point.evaporation),
+                recommendedTechnology: this.recommendTechnology({
+                    humidity: point.humidity,
+                    windSpeed: point.wind,
+                    condensationIndex: this.calculateCondensationIndex(
+                        point.humidity,
+                        point.temp,
+                        point.wind,
+                        point.evaporation
+                    )
+                }),
+                timestamp: new Date().toISOString()
             }));
             
             console.log(`✅ Loaded ${this.gridPoints.length} grid points from JSON`);
@@ -43,6 +57,43 @@ class DataManager {
             this.gridPoints = this.generateCaspianGrid();
             return this.gridPoints;
         }
+    }
+
+    // Calculate condensation potential index
+    calculateCondensationIndex(humidity, temp, wind, evaporation) {
+        // Weighted scoring for condensation potential
+        const humidityScore = (humidity / 100) * 40; // 40% weight
+        const tempScore = Math.max(0, (30 - Math.abs(temp - 20)) / 30) * 25; // 25% weight
+        const windScore = Math.max(0, (15 - wind) / 15) * 20; // 20% weight
+        const evaporationScore = Math.min(15, evaporation / 2); // 15% weight
+        
+        const total = humidityScore + tempScore + windScore + evaporationScore;
+        return Math.round(total);
+    }
+
+    // Get risk level based on evaporation
+    getRiskLevel(evaporation) {
+        const evap = parseFloat(evaporation);
+        if (evap >= Config.EVAPORATION_THRESHOLDS.CRITICAL) return 'CRITICAL';
+        if (evap >= Config.EVAPORATION_THRESHOLDS.HIGH) return 'HIGH';
+        if (evap >= Config.EVAPORATION_THRESHOLDS.MEDIUM) return 'MEDIUM';
+        return 'LOW';
+    }
+
+    // Recommend technology based on conditions
+    recommendTechnology(conditions) {
+        const { humidity, windSpeed, condensationIndex } = conditions;
+
+        // Logic to recommend technology
+        if (humidity > 70 && windSpeed >= 3 && windSpeed <= 12 && condensationIndex > 60) {
+            return 'Fog Collector';
+        } else if (humidity > 60 && windSpeed <= 5 && condensationIndex > 65) {
+            return 'Radiative Cooling';
+        } else if (humidity > 65 && condensationIndex > 70) {
+            return 'Ionization System';
+        }
+        
+        return 'Assessment Needed';
     }
 
     // Generate Caspian Sea grid points (fallback method)
@@ -122,27 +173,6 @@ class DataManager {
     generateHumidity(lat, lng) {
         const baseHumidity = 60 - (lat - 36) * 1.5; // more humid in north
         return Math.max(20, Math.min(95, baseHumidity + Math.random() * 20 - 10)).toFixed(2);
-    }
-
-    // Calculate condensation potential index
-    calculateCondensationIndex(humidity, temp, wind, evaporation) {
-        // Weighted scoring for condensation potential
-        const humidityScore = (humidity / 100) * 40; // 40% weight
-        const tempScore = Math.max(0, (30 - Math.abs(temp - 20)) / 30) * 25; // 25% weight
-        const windScore = Math.max(0, (15 - wind) / 15) * 20; // 20% weight
-        const evaporationScore = Math.min(15, evaporation / 2); // 15% weight
-        
-        const total = humidityScore + tempScore + windScore + evaporationScore;
-        return Math.round(total);
-    }
-
-    // Get risk level based on evaporation
-    getRiskLevel(evaporation) {
-        const evap = parseFloat(evaporation);
-        if (evap >= Config.EVAPORATION_THRESHOLDS.CRITICAL) return 'CRITICAL';
-        if (evap >= Config.EVAPORATION_THRESHOLDS.HIGH) return 'HIGH';
-        if (evap >= Config.EVAPORATION_THRESHOLDS.MEDIUM) return 'MEDIUM';
-        return 'LOW';
     }
 
     // Get evaporation data for specific region
@@ -232,24 +262,6 @@ class DataManager {
             }));
     }
 
-    // Recommend technology based on conditions
-    recommendTechnology(point) {
-        const humidity = parseFloat(point.humidity);
-        const windSpeed = parseFloat(point.windSpeed);
-        const condensationIndex = point.condensationIndex;
-
-        // Logic to recommend technology
-        if (humidity > 70 && windSpeed >= 3 && windSpeed <= 12) {
-            return 'Fog Collector';
-        } else if (humidity > 60 && windSpeed <= 5 && condensationIndex > 60) {
-            return 'Radiative Cooling';
-        } else if (humidity > 65 && condensationIndex > 70) {
-            return 'Ionization System';
-        }
-        
-        return 'Assessment Needed';
-    }
-
     // Get summary statistics for Kazakhstan sector
     async getKazakhstanStats() {
         const kazakhstanData = await this.getEvaporationData('kazakhstan');
@@ -335,4 +347,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = DataManager;
 } else {
     window.DataManager = DataManager;
-                    }
+    }
