@@ -8,24 +8,62 @@ class DataManager {
         this.loading = false;
     }
 
-    // Generate Caspian Sea grid points
+    // Load Caspian grid data from JSON file
+    async loadCaspianGrid() {
+        try {
+            // JSON файлын жүктеу
+            const response = await fetch('./data/caspian_grid.json');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const jsonData = await response.json();
+            
+            // FeatureCollection-нан нүктелерді алу
+            this.gridPoints = jsonData.features.map(feature => ({
+                id: feature.properties.id,
+                latitude: feature.properties.latitude,
+                longitude: feature.properties.longitude,
+                evaporation: feature.properties.evaporation,
+                sst: feature.properties.sst,
+                airTemperature: feature.properties.temperature,
+                windSpeed: feature.properties.wind,
+                humidity: feature.properties.humidity,
+                condensationIndex: feature.properties.condensationIndex,
+                riskLevel: feature.properties.riskLevel,
+                recommendedTechnology: feature.properties.recommendedTechnology,
+                timestamp: feature.properties.timestamp || new Date().toISOString()
+            }));
+            
+            console.log(`✅ Loaded ${this.gridPoints.length} grid points from JSON`);
+            return this.gridPoints;
+        } catch (error) {
+            console.error('❌ Error loading grid data from JSON:', error);
+            console.log('🔄 Falling back to generated grid...');
+            // Егер JSON жүктелмесе, generateCaspianGrid() қолданылады
+            this.gridPoints = this.generateCaspianGrid();
+            return this.gridPoints;
+        }
+    }
+
+    // Generate Caspian Sea grid points (fallback method)
     generateCaspianGrid() {
         const points = [];
-        // Create a grid covering the Caspian Sea area
-        for (let lat = 36.5; lat <= 46.5; lat += 0.5) {
-            for (let lng = 46.5; lng <= 56.5; lng += 0.5) {
+        
+        // Бұл резерв әдіс - егер JSON файлы жоқ болса
+        for (let lat = 36.5; lat <= 47.0; lat += 1.17) {
+            for (let lon = 49.0; lon <= 54.5; lon += 0.39) {
                 // Skip points outside the sea (basic filtering)
-                if (this.isInCaspianSea(lat, lng)) {
-                    const evaporation = this.generateEvaporationValue(lat, lng);
-                    const sst = this.generateSST(lat, lng);
-                    const airTemp = this.generateAirTemperature(lat, lng);
-                    const windSpeed = this.generateWindSpeed(lat, lng);
-                    const humidity = this.generateHumidity(lat, lng);
+                if (this.isInCaspianSea(lat, lon)) {
+                    const evaporation = this.generateEvaporationValue(lat, lon);
+                    const sst = this.generateSST(lat, lon);
+                    const airTemp = this.generateAirTemperature(lat, lon);
+                    const windSpeed = this.generateWindSpeed(lat, lon);
+                    const humidity = this.generateHumidity(lat, lon);
                     
                     points.push({
-                        id: `point_${lat}_${lng}`,
+                        id: `point_${lat}_${lon}`,
                         latitude: lat,
-                        longitude: lng,
+                        longitude: lon,
                         evaporation: evaporation,
                         sst: sst,
                         airTemperature: airTemp,
@@ -38,16 +76,18 @@ class DataManager {
                 }
             }
         }
+        
+        console.log(`🔄 Generated ${points.length} grid points`);
         return points;
     }
 
     // Simple check if coordinates are likely in Caspian Sea
     isInCaspianSea(lat, lng) {
         // Basic bounding box with some exclusions
-        return lat >= 36.5 && lat <= 46.5 && lng >= 46.5 && lng <= 56.5;
+        return lat >= 36.5 && lat <= 47.0 && lng >= 46.5 && lng <= 56.5;
     }
 
-    // Generate realistic evaporation values based on location
+    // Generate realistic evaporation values based on location (fallback)
     generateEvaporationValue(lat, lng) {
         // Higher evaporation in southern parts, near coasts
         let baseValue = 8;
@@ -60,25 +100,25 @@ class DataManager {
         return Math.max(2, baseValue + (Math.random() * 8 - 2)).toFixed(2);
     }
 
-    // Generate Sea Surface Temperature
+    // Generate Sea Surface Temperature (fallback)
     generateSST(lat, lng) {
         // SST varies by season and location
         const baseTemp = 15 + (lat - 36) * 0.5; // warmer in south
         return (baseTemp + Math.random() * 8 - 4).toFixed(2);
     }
 
-    // Generate Air Temperature
+    // Generate Air Temperature (fallback)
     generateAirTemperature(lat, lng) {
         const baseTemp = 20 + (lat - 36) * 0.3; // warmer in south
         return (baseTemp + Math.random() * 10 - 5).toFixed(2);
     }
 
-    // Generate Wind Speed
+    // Generate Wind Speed (fallback)
     generateWindSpeed(lat, lng) {
         return (Math.random() * 15).toFixed(2);
     }
 
-    // Generate Humidity
+    // Generate Humidity (fallback)
     generateHumidity(lat, lng) {
         const baseHumidity = 60 - (lat - 36) * 1.5; // more humid in north
         return Math.max(20, Math.min(95, baseHumidity + Math.random() * 20 - 10)).toFixed(2);
@@ -105,17 +145,11 @@ class DataManager {
         return 'LOW';
     }
 
-    // Load Caspian grid data
-    async loadCaspianGrid() {
-        if (this.gridPoints.length === 0) {
-            this.gridPoints = this.generateCaspianGrid();
-        }
-        return this.gridPoints;
-    }
-
     // Get evaporation data for specific region
     async getEvaporationData(region = 'all') {
-        await this.loadCaspianGrid();
+        if (this.gridPoints.length === 0) {
+            await this.loadCaspianGrid();
+        }
         
         if (region === 'kazakhstan') {
             // Filter for Kazakhstan sector (roughly northern part)
@@ -184,14 +218,17 @@ class DataManager {
 
     // Get hotspot data (top 5 highest evaporation points)
     async getHotspots() {
-        await this.loadCaspianGrid();
+        if (this.gridPoints.length === 0) {
+            await this.loadCaspianGrid();
+        }
+        
         return this.gridPoints
             .sort((a, b) => parseFloat(b.evaporation) - parseFloat(a.evaporation))
             .slice(0, 5)
             .map((point, index) => ({
                 ...point,
                 rank: index + 1,
-                recommendedTechnology: this.recommendTechnology(point)
+                recommendedTechnology: point.recommendedTechnology || this.recommendTechnology(point)
             }));
     }
 
@@ -298,4 +335,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = DataManager;
 } else {
     window.DataManager = DataManager;
-    }
+                    }
