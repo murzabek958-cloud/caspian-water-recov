@@ -12,8 +12,9 @@ class MapManager {
 
     // Initialize the map
     init() {
-        if (!window.mapboxgl) {
+        if (typeof mapboxgl === 'undefined') {
             console.error('Mapbox GL JS not loaded');
+            this.showMapFallback();
             return;
         }
 
@@ -32,6 +33,37 @@ class MapManager {
             this.loadMapData();
             this.setupEventListeners();
         });
+    }
+
+    // Show fallback if Mapbox is not loaded
+    showMapFallback() {
+        const container = document.getElementById('map');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div style="
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(135deg, #e6f2ff, #f0f8ff);
+                border-radius: 16px;
+                text-align: center;
+                padding: 2rem;
+                color: #2c3e50;
+            ">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
+                <h3 style="color: #1e3c72; margin-bottom: 0.5rem;">Geospatial View</h3>
+                <p style="color: #6c757d; max-width: 400px; text-align: center;">
+                    Interactive map requires WebGL support.<br>
+                    Try on desktop browser or enable "Desktop site" in mobile Chrome.
+                </p>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: #495057;">
+                    <strong>Current Status:</strong> Using mock data for demonstration
+                </div>
+            </div>
+        `;
     }
 
     // Load map data
@@ -227,7 +259,7 @@ class MapManager {
 
     // Toggle between heatmap and markers
     toggleMarkerMode(mode) {
-        if (!this.sourcesLoaded) return;
+        if (!this.map || !this.sourcesLoaded) return;
 
         this.markerMode = mode;
 
@@ -242,11 +274,13 @@ class MapManager {
 
     // Fly to specific coordinates
     flyTo(coords) {
-        this.map.flyTo({
-            center: coords,
-            zoom: 10,
-            essential: true
-        });
+        if (this.map) {
+            this.map.flyTo({
+                center: coords,
+                zoom: 10,
+                essential: true
+            });
+        }
     }
 
     // Setup event listeners
@@ -267,7 +301,7 @@ class MapManager {
 
     // Update data on the map
     async updateMapData() {
-        if (!this.sourcesLoaded) return;
+        if (!this.map || !this.sourcesLoaded) return;
 
         try {
             const points = await this.dataManager.getEvaporationData();
@@ -294,3 +328,10 @@ class MapManager {
         return this.map.getZoom();
     }
 }
+
+// Export for browser usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = MapManager;
+} else {
+    window.MapManager = MapManager;
+                    }
