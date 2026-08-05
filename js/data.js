@@ -103,7 +103,7 @@ class DataManager {
         // Бұл резерв әдіс - егер JSON файлы жоқ болса
         for (let lat = 36.5; lat <= 47.0; lat += 1.17) {
             for (let lon = 49.0; lon <= 54.5; lon += 0.39) {
-                // Skip points outside the sea (basic filtering)
+                // Skip points outside the sea (using improved boundary check)
                 if (this.isInCaspianSea(lat, lon)) {
                     const evaporation = this.generateEvaporationValue(lat, lon);
                     const sst = this.generateSST(lat, lon);
@@ -132,10 +132,39 @@ class DataManager {
         return points;
     }
 
-    // Simple check if coordinates are likely in Caspian Sea
+    // Improved Caspian Sea boundary check
     isInCaspianSea(lat, lng) {
-        // Basic bounding box with some exclusions
-        return lat >= 36.5 && lat <= 47.0 && lng >= 46.5 && lng <= 56.5;
+        // Caspian Sea shape approximation using latitude bands
+        // Each band narrows the longitude range to follow the sea's actual coastline
+        
+        if (lat < 36.5 || lat > 47.0) return false;
+        
+        // Southern part (Iran coast) - narrower, centered around 50-52
+        if (lat >= 36.5 && lat < 38.5) {
+            return lng >= 48.5 && lng <= 53.5;
+        }
+        // South-central (Turkmenistan/Azerbaijan) 
+        if (lat >= 38.5 && lat < 40.5) {
+            return lng >= 48.5 && lng <= 54.0;
+        }
+        // Central (Baku latitude, narrows near Absheron)
+        if (lat >= 40.5 && lat < 42.5) {
+            return lng >= 47.5 && lng <= 53.5;
+        }
+        // Mid-north (narrowest point of the sea)
+        if (lat >= 42.5 && lat < 44.0) {
+            return lng >= 47.5 && lng <= 52.5;
+        }
+        // Northern (Kazakhstan coast, wider, shallower)
+        if (lat >= 44.0 && lat < 45.5) {
+            return lng >= 47.0 && lng <= 53.0;
+        }
+        // Far north (widest, shallowest part near Atyrau/Volga delta)
+        if (lat >= 45.5 && lat <= 47.0) {
+            return lng >= 47.0 && lng <= 51.5;
+        }
+        
+        return false;
     }
 
     // Generate realistic evaporation values based on location (fallback)
@@ -347,4 +376,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = DataManager;
 } else {
     window.DataManager = DataManager;
-    }
+            }
