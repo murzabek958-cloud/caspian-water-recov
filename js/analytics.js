@@ -226,3 +226,10 @@ class AnalyticsManager {
         };
     }
 }
+
+// Export for browser usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = AnalyticsManager;
+} else {
+    window.AnalyticsManager = AnalyticsManager;
+                            }
