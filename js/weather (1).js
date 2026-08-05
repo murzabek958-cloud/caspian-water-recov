@@ -2,11 +2,11 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const LOCATIONS = [
-    { city: 'Ақтау',           lat: 43.65, lon: 51.17 },
-    { city: 'Атырау',          lat: 47.10, lon: 51.91 },
-    { city: 'Форт-Шевченко',   lat: 44.51, lon: 50.27 },
-    { city: 'Қаражанбас',      lat: 45.42, lon: 52.68 },
-    { city: 'Маңғыстау',       lat: 43.74, lon: 51.48 },
+    { city: 'Ақтау',         lat: 43.65, lon: 51.17 },
+    { city: 'Атырау',        lat: 47.10, lon: 51.91 },
+    { city: 'Форт-Шевченко', lat: 44.51, lon: 50.27 },
+    { city: 'Қаражанбас',    lat: 45.42, lon: 52.68 },
+    { city: 'Маңғыстау',     lat: 43.74, lon: 51.48 },
   ];
 
   const KEY = process.env.OWM_KEY;
@@ -36,10 +36,12 @@ export default async function handler(req, res) {
         const url = `https://api.openweathermap.org/data/2.5/weather?lat=${loc.lat}&lon=${loc.lon}&appid=${KEY}&units=metric`;
         const r = await fetch(url);
         const d = await r.json();
+
         const temp     = +d.main.temp.toFixed(1);
         const humidity = d.main.humidity;
         const wind     = +d.wind.speed.toFixed(1);
         const index    = condensationIndex(temp, humidity, wind);
+
         return {
           city:  loc.city,
           lat:   loc.lat,
