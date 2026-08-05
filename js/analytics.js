@@ -42,6 +42,7 @@ class AnalyticsManager {
                 averageWind: 0,
                 maxEvaporation: 0,
                 minEvaporation: 0,
+                totalPoints: 0,
                 riskDistribution: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }
             };
         }
@@ -53,6 +54,7 @@ class AnalyticsManager {
             averageWind: 0,
             maxEvaporation: 0,
             minEvaporation: Infinity,
+            totalPoints: data.length,
             riskDistribution: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }
         };
 
@@ -232,4 +234,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = AnalyticsManager;
 } else {
     window.AnalyticsManager = AnalyticsManager;
-                            }
+    }
