@@ -1,7 +1,7 @@
 // Main application class
 class CaspianWaterRecoveryApp {
     constructor() {
-        this.dataManager = new DataManager();
+        this.dataManager = null;
         this.mapManager = null;
         this.hotspotDetector = null;
         this.condensationCalculator = null;
@@ -17,19 +17,24 @@ class CaspianWaterRecoveryApp {
     // Initialize the application
     async init() {
         try {
-            // Initialize all modules
-            this.hotspotDetector = new HotspotDetector(this.dataManager);
-            this.condensationCalculator = new CondensationIndexCalculator(this.dataManager);
-            this.decisionEngine = new DecisionSupportEngine(this.dataManager);
-            this.technologySelector = new TechnologySelector(this.dataManager);
-            this.economicModeler = new EconomicModeler();
-            this.weatherMonitor = new WeatherMonitor(this.dataManager);
-            this.analyticsManager = new AnalyticsManager(this.dataManager);
+            // Initialize all modules (using window.* because no exports)
+            this.dataManager = new window.DataManager();
+            this.hotspotDetector = new window.HotspotDetector(this.dataManager);
+            this.condensationCalculator = new window.CondensationIndexCalculator(this.dataManager);
+            this.decisionEngine = new window.DecisionSupportEngine(this.dataManager);
+            this.technologySelector = new window.TechnologySelector(this.dataManager);
+            this.economicModeler = new window.EconomicModeler();
+            this.weatherMonitor = new window.WeatherMonitor(this.dataManager);
+            this.analyticsManager = new window.AnalyticsManager(this.dataManager);
 
             // Initialize map after all dependencies are ready
             setTimeout(() => {
-                this.mapManager = new MapManager(this.dataManager);
-                this.mapManager.init();
+                if (typeof window.MapManager !== 'undefined') {
+                    this.mapManager = new window.MapManager(this.dataManager);
+                    this.mapManager.init();
+                } else {
+                    console.warn('MapManager not available — using fallback');
+                }
             }, 100);
 
             // Load initial data
@@ -44,9 +49,22 @@ class CaspianWaterRecoveryApp {
             // Start periodic updates
             this.startPeriodicUpdates();
 
-            console.log('Caspian Water Recovery App initialized successfully');
+            console.log('✅ Caspian Water Recovery App initialized successfully');
         } catch (error) {
-            console.error('Error initializing app:', error);
+            console.error('❌ Error initializing app:', error);
+            // Show friendly error in UI
+            const errorEl = document.getElementById('error-display');
+            if (errorEl) {
+                errorEl.innerHTML = `
+                    <div class="error-message">
+                        <strong>Initialization Error:</strong> ${error.message || 'Unknown error'}
+                        <button onclick="document.getElementById(\'error-display\').innerHTML=\'\'" 
+                                style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
+                            Close
+                        </button>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -58,34 +76,62 @@ class CaspianWaterRecoveryApp {
             await this.hotspotDetector.detectHotspots();
             await this.condensationCalculator.analyzePotential();
             
-            console.log('Initial data loaded');
+            console.log('✅ Initial data loaded');
         } catch (error) {
-            console.error('Error loading initial data:', error);
+            console.error('❌ Error loading initial data:', error);
         }
     }
 
     // Render all components
     renderAllComponents() {
         // Render hotspots
-        this.hotspotDetector.renderHotspots();
+        if (this.hotspotDetector) {
+            this.hotspotDetector.renderHotspots();
+        } else {
+            document.getElementById('hotspots-container').innerHTML = '<div class="error-message">HotspotDetector not initialized</div>';
+        }
 
         // Render condensation analysis
-        this.condensationCalculator.renderAnalysis();
+        if (this.condensationCalculator) {
+            this.condensationCalculator.renderAnalysis();
+        } else {
+            document.getElementById('condensation-analysis').innerHTML = '<div class="error-message">Condensation calculator not initialized</div>';
+        }
 
         // Render decision support
-        this.decisionEngine.renderPanel();
+        if (this.decisionEngine) {
+            this.decisionEngine.renderPanel();
+        } else {
+            document.getElementById('decision-support-panel').innerHTML = '<div class="error-message">Decision engine not initialized</div>';
+        }
 
         // Render technology comparison
-        this.technologySelector.renderComparison();
+        if (this.technologySelector) {
+            this.technologySelector.renderComparison();
+        } else {
+            document.getElementById('technology-comparison').innerHTML = '<div class="error-message">Technology selector not initialized</div>';
+        }
 
         // Render economic model
-        this.economicModeler.renderModel();
+        if (this.economicModeler) {
+            this.economicModeler.renderModel();
+        } else {
+            document.getElementById('economic-model').innerHTML = '<div class="error-message">Economic model not initialized</div>';
+        }
 
         // Render weather monitor
-        this.weatherMonitor.renderWeatherCards();
+        if (this.weatherMonitor) {
+            this.weatherMonitor.renderWeatherCards();
+        } else {
+            document.getElementById('weather-monitor').innerHTML = '<div class="error-message">Weather monitor not initialized</div>';
+        }
 
         // Render analytics
-        this.analyticsManager.renderStats();
+        if (this.analyticsManager) {
+            this.analyticsManager.renderStats();
+        } else {
+            document.getElementById('analytics-stats').innerHTML = '<div class="error-message">Analytics manager not initialized</div>';
+        }
     }
 
     // Setup event listeners
@@ -168,12 +214,16 @@ class CaspianWaterRecoveryApp {
 
     // Go to hotspot
     goToHotspot(index) {
-        const hotspot = this.hotspotDetector.getHotspotByIndex(index);
-        if (hotspot && this.mapManager) {
-            this.mapManager.flyTo([hotspot.longitude, hotspot.latitude]);
-            
-            // Update technology comparison for this location
-            this.technologySelector.refresh(hotspot);
+        if (this.hotspotDetector) {
+            const hotspot = this.hotspotDetector.getHotspotByIndex(index);
+            if (hotspot && this.mapManager) {
+                this.mapManager.flyTo([hotspot.longitude, hotspot.latitude]);
+                
+                // Update technology comparison for this location
+                if (this.technologySelector) {
+                    this.technologySelector.refresh(hotspot);
+                }
+            }
         }
     }
 
@@ -186,8 +236,10 @@ class CaspianWaterRecoveryApp {
 
     // Set economic scenario
     setEconomicScenario(scenario) {
-        this.economicModeler.setScenario(scenario);
-        this.economicModeler.renderModel();
+        if (this.economicModeler) {
+            this.economicModeler.setScenario(scenario);
+            this.economicModeler.renderModel();
+        }
     }
 
     // Refresh all data
@@ -197,22 +249,22 @@ class CaspianWaterRecoveryApp {
             await this.loadData();
             
             // Refresh all components
-            this.hotspotDetector.refresh();
-            this.condensationCalculator.refresh();
-            this.decisionEngine.refresh();
-            this.technologySelector.refresh();
-            this.economicModeler.renderModel();
-            this.weatherMonitor.refresh();
-            this.analyticsManager.refresh();
+            if (this.hotspotDetector) this.hotspotDetector.refresh();
+            if (this.condensationCalculator) this.condensationCalculator.refresh();
+            if (this.decisionEngine) this.decisionEngine.refresh();
+            if (this.technologySelector) this.technologySelector.refresh();
+            if (this.economicModeler) this.economicModeler.renderModel();
+            if (this.weatherMonitor) this.weatherMonitor.refresh();
+            if (this.analyticsManager) this.analyticsManager.refresh();
             
             // Update map
             if (this.mapManager) {
                 this.mapManager.updateMapData();
             }
             
-            console.log('All data refreshed');
+            console.log('✅ All data refreshed');
         } catch (error) {
-            console.error('Error refreshing data:', error);
+            console.error('❌ Error refreshing data:', error);
         }
     }
 
@@ -227,9 +279,9 @@ class CaspianWaterRecoveryApp {
     // Export data
     exportData() {
         const exportData = {
-            hotspots: this.hotspotDetector.topHotspots,
-            analytics: this.analyticsManager.analyticsData,
-            economicModel: this.economicModeler.getResults(),
+            hotspots: this.hotspotDetector?.topHotspots || [],
+            analytics: this.analyticsManager?.analyticsData || null,
+            economicModel: this.economicModeler?.getResults() || null,
             timestamp: new Date().toISOString(),
             version: '1.0.0'
         };
@@ -262,17 +314,17 @@ class CaspianWaterRecoveryApp {
     // Get system status
     getSystemStatus() {
         return {
-            dataLoaded: this.dataManager.gridPoints.length > 0,
+            dataLoaded: this.dataManager?.gridPoints?.length > 0 || false,
             mapReady: !!this.mapManager?.map,
-            hotspotsDetected: this.hotspotDetector.topHotspots.length > 0,
-            condensationAnalyzed: this.condensationCalculator.indexes.length > 0,
+            hotspotsDetected: this.hotspotDetector?.topHotspots?.length > 0 || false,
+            condensationAnalyzed: this.condensationCalculator?.indexes?.length > 0 || false,
             timestamp: new Date().toISOString()
         };
     }
 
     // Handle errors gracefully
     handleError(error, context = '') {
-        console.error(`Error in ${context}:`, error);
+        console.error(`❌ Error in ${context}:`, error);
         
         // Show user-friendly error message
         const errorContainer = document.getElementById('error-display');
@@ -280,7 +332,10 @@ class CaspianWaterRecoveryApp {
             errorContainer.innerHTML = `
                 <div class="error-message">
                     <strong>Error:</strong> ${error.message || 'An error occurred'}
-                    <button onclick="document.getElementById('error-display').innerHTML=''" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Close</button>
+                    <button onclick="document.getElementById('error-display').innerHTML=''" 
+                            style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
+                        Close
+                    </button>
                 </div>
             `;
         }
