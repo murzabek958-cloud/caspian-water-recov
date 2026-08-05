@@ -2,19 +2,18 @@
 const Config = {
     // Mapbox configuration
     MAPBOX: {
-        TOKEN: process.env.MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA',
+        TOKEN: window.ENV?.MAPBOX_ACCESS_TOKEN || 
+               localStorage.getItem('MAPBOX_ACCESS_TOKEN') || 
+               'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA',
         STYLE: 'mapbox://styles/mapbox/satellite-streets-v11'
     },
     
     // OpenWeatherMap configuration
     OPENWEATHER: {
-        API_KEY: process.env.OPENWEATHER_API_KEY || 'your_api_key_here',
+        API_KEY: window.ENV?.OPENWEATHER_API_KEY || 
+                 localStorage.getItem('OPENWEATHER_API_KEY') || 
+                 'your_api_key_here',
         BASE_URL: 'https://api.openweathermap.org/data/2.5'
-    },
-    
-    // NASA POWER API configuration
-    NASA_POWER: {
-        BASE_URL: 'https://power.larc.nasa.gov/api/temporal/daily/point'
     },
     
     // Caspian Sea coordinates and boundaries
@@ -131,7 +130,10 @@ const Config = {
     }
 };
 
-// Export for use in other modules
+// Export for use in other modules (Node.js compatibility)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Config;
+} else {
+    // For browser usage
+    window.Config = Config;
 }
