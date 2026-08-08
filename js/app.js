@@ -136,10 +136,10 @@ class CaspianWaterRecoveryApp {
 
     // Setup event listeners
     setupEventListeners() {
-        // View controls
-        document.addEventListener('DOMContentLoaded', () => {
-            this.setupViewControls();
-        });
+        // View controls — DOM is already ready by the time init() finishes
+        // loading data, so call directly instead of waiting for
+        // DOMContentLoaded (which has already fired by then).
+        this.setupViewControls();
     }
 
     // Setup view controls
@@ -356,3 +356,4 @@ window.onclick = function(event) {
         }
     });
 };
+            
